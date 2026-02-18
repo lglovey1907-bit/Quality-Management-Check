@@ -1,0 +1,55 @@
+[server]
+# Set upload size limit to 20MB
+maxUploadSize = 20
+
+# Message size limit
+maxMessageSize = 20
+
+# Enable CORS for custom upload endpoint
+enableCORS = true
+
+# Disable XSRf for file uploads (enable for production with proper auth)
+enableXsrfProtection = false
+
+# Server configuration
+port = 8501
+address = "0.0.0.0"
+
+# Disable websocket compression (can cause issues)
+enableWebsocketCompression = false
+
+# Increase timeouts significantly
+fileWatcherType = "poll"
+headless = true
+
+# Very long connection timeout
+serverConnectionTimeoutSeconds = 600
+
+# Increase worker thread pool for large files
+maxConcurrentConnections = 100
+
+[browser]
+# Automatically open browser
+gatherUsageStats = false
+
+[runner]
+# Fast rerun on file changes
+fastReruns = true
+
+# Increase script timeout
+scriptTimeoutSeconds = 600
+
+[client]
+# Show error details
+showErrorDetails = true
+
+# Toolbar mode
+toolbarMode = "auto"
+
+[theme]
+# Optional: Custom theme
+primaryColor = "#1f77b4"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F0F2F6"
+textColor = "#262730"
+font = "sans serif"

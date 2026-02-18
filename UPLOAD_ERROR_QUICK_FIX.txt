@@ -1,0 +1,56 @@
+╔══════════════════════════════════════════════════════════════════╗
+║          PDF UPLOAD ERROR - QUICK FIX GUIDE                      ║
+╚══════════════════════════════════════════════════════════════════╝
+
+❌ ERROR: AxiosError: Network Error
+
+🔴 KNOWN ISSUE: Files > 20MB often fail in web upload
+
+✅ BEST FIX - Use Direct Analysis (No Upload Required):
+
+   python analyze_pdf_direct.py report.pdf "Company Name"
+
+   # Multiple files:
+   python analyze_pdf_direct.py r1.pdf r2.pdf r3.pdf "Company"
+
+   ★ This bypasses web upload completely - works with any file size!
+
+✅ OTHER QUICK FIXES (Try in order):
+
+1. CHECK FILE SIZE
+   • File must be < 200MB
+   • Compress at: https://www.ilovepdf.com/compress_pdf
+
+2. CLEAR BROWSER CACHE
+   • Chrome/Edge: Ctrl+Shift+Delete → Clear cache
+   • Or hard refresh: Ctrl+Shift+R
+
+3. TRY DIFFERENT BROWSER
+   • Use Chrome, Edge, or Firefox
+   • Disable ad blockers/extensions
+
+4. USE COMMAND LINE INSTEAD
+   python main.py --pdf-file report.pdf --company "Name"
+
+5. RESTART APP
+   • Stop Streamlit (Ctrl+C)
+   • Run: streamlit run app.py
+
+═══════════════════════════════════════════════════════════════════
+
+📋 FILE REQUIREMENTS:
+   ✓ PDF format only
+   ✓ Max 200MB per file
+   ✓ Not password-protected
+   ✓ Contains text (not scanned images)
+
+═══════════════════════════════════════════════════════════════════
+
+💡 STILL NOT WORKING?
+
+See detailed guide: TROUBLESHOOTING_UPLOAD.md
+
+Or use online mode instead:
+   python main.py --company TICKER --years 5
+
+═══════════════════════════════════════════════════════════════════

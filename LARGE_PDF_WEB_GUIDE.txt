@@ -1,0 +1,96 @@
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║  📁 WEB SOLUTION FOR LARGE PDF FILES - QUICK GUIDE           ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+✅ SOLUTION: No more upload errors for large PDFs!
+
+┌───────────────────────────────────────────────────────────────┐
+│                                                               │
+│  SIMPLE 4-STEP PROCESS:                                       │
+│                                                               │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │  STEP 1: Copy PDFs to Folder                            │ │
+│  │                                                          │ │
+│  │  Quality-Management-Check/                              │ │
+│  │  └── pdf_uploads/  ← Put your PDFs here                 │ │
+│  │      ├── report_2024.pdf (25 MB)                        │ │
+│  │      ├── report_2023.pdf (21 MB)                        │ │
+│  │      └── report_2022.pdf (18 MB)                        │ │
+│  └─────────────────────────────────────────────────────────┘ │
+│                                                               │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │  STEP 2: Start Web App                                  │ │
+│  │                                                          │ │
+│  │  $ streamlit run app.py                                 │ │
+│  │                                                          │ │
+│  │  → Opens http://localhost:8501                          │ │
+│  └─────────────────────────────────────────────────────────┘ │
+│                                                               │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │  STEP 3: Select "Browse Files on Server"                │ │
+│  │                                                          │ │
+│  │  ○ Upload from Computer (< 20MB)                        │ │
+│  │  ● Browse Files on Server (Any Size) ← Choose this!     │ │
+│  └─────────────────────────────────────────────────────────┘ │
+│                                                               │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │  STEP 4: Select Files & Analyze                         │ │
+│  │                                                          │ │
+│  │  Company Name: [Your Company Name        ]              │ │
+│  │                                                          │ │
+│  │  Choose PDF files:                                      │ │
+│  │  ☑ report_2024.pdf (25 MB)                              │ │
+│  │  ☑ report_2023.pdf (21 MB)                              │ │
+│  │  ☐ report_2022.pdf (18 MB)                              │ │
+│  │                                                          │ │
+│  │  [🔍 Analyze Quality]  ←─ Click here!                   │ │
+│  └─────────────────────────────────────────────────────────┘ │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════
+
+✨ BENEFITS:
+
+  ✅ No file size limits (any PDF size works!)
+  ✅ No upload errors  
+  ✅ No browser timeouts
+  ✅ Instant file access (already on server)
+  ✅ 100% reliable
+  ✅ Easy to use - just select from dropdown!
+
+═══════════════════════════════════════════════════════════════
+
+📍 WHERE IS THE pdf_uploads FOLDER?
+
+  Look in your project directory:
+  
+  Quality-Management-Check/
+  ├── src/
+  ├── app.py
+  ├── main.py
+  └── pdf_uploads/  ← Here! Copy your PDFs here
+
+═══════════════════════════════════════════════════════════════
+
+🔄 ADDED NEW FILES?
+
+  1. Copy PDFs to pdf_uploads/
+  2. Go to web browser
+  3. Press F5 (refresh)
+  4. Files appear in dropdown!
+
+═══════════════════════════════════════════════════════════════
+
+📖 DETAILED GUIDE:
+
+  See: WEB_LARGE_PDF_SOLUTION.md
+
+═══════════════════════════════════════════════════════════════
+
+🎉 That's it! No terminal commands needed!
+   No upload errors! Works with ANY file size!
+
+═══════════════════════════════════════════════════════════════

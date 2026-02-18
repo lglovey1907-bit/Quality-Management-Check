@@ -1,0 +1,14 @@
+# System-level packages required for Streamlit Cloud deployment
+# These are apt-get packages needed by the application
+
+# PDF processing dependencies
+poppler-utils
+libpoppler-cpp-dev
+
+# Image processing (Pillow dependencies)
+libjpeg-dev
+zlib1g-dev
+
+# Matplotlib backend support
+libfreetype6-dev
+libpng-dev
