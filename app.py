@@ -14,7 +14,7 @@ from datetime import datetime
 def load_dependencies():
     """Cache heavy imports to speed up subsequent loads"""
     from src import QualityManagementAgent, ReportFormatter, parse_multiple_reports, generate_institutional_pdf
-    from src.pdf_compressor import compress_pdf_for_upload, format_size
+    from src.pdf_compressor import compress_pdf_for_upload
     import plotly.graph_objects as go
     import plotly.express as px
     return {
@@ -23,7 +23,6 @@ def load_dependencies():
         'parse_multiple_reports': parse_multiple_reports,
         'generate_institutional_pdf': generate_institutional_pdf,
         'compress_pdf_for_upload': compress_pdf_for_upload,
-        'format_size': format_size,
         'go': go,
         'px': px
     }
