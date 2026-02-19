@@ -7,14 +7,29 @@ import streamlit as st
 import os
 import tempfile
 from pathlib import Path
-from src import QualityManagementAgent, ReportFormatter, parse_multiple_reports, generate_institutional_pdf
-from src.pdf_compressor import compress_pdf_for_upload, format_size
-from dotenv import load_dotenv
-import plotly.graph_objects as go
-import plotly.express as px
 from datetime import datetime
 
+# Lazy imports - load heavy libraries only when needed
+@st.cache_resource
+def load_dependencies():
+    """Cache heavy imports to speed up subsequent loads"""
+    from src import QualityManagementAgent, ReportFormatter, parse_multiple_reports, generate_institutional_pdf
+    from src.pdf_compressor import compress_pdf_for_upload, format_size
+    import plotly.graph_objects as go
+    import plotly.express as px
+    return {
+        'QualityManagementAgent': QualityManagementAgent,
+        'ReportFormatter': ReportFormatter,
+        'parse_multiple_reports': parse_multiple_reports,
+        'generate_institutional_pdf': generate_institutional_pdf,
+        'compress_pdf_for_upload': compress_pdf_for_upload,
+        'format_size': format_size,
+        'go': go,
+        'px': px
+    }
+
 # Load environment variables
+from dotenv import load_dotenv
 load_dotenv()
 
 # Load secrets from Streamlit Cloud (if deployed) or environment variables
@@ -242,9 +257,25 @@ if 'analysis_complete' not in st.session_state:
     st.session_state.analysis_complete = False
 if 'report' not in st.session_state:
     st.session_state.report = None
+if 'deps_loaded' not in st.session_state:
+    st.session_state.deps_loaded = False
+
+# Lightweight helper function
+def format_size(size_mb):
+    """Format file size in MB - lightweight version"""
+    return f"{size_mb:.2f} MB"
 
 def display_report(report):
     """Display the analysis report in an advanced professional format"""
+    
+    # Load plotly lazily (only when displaying report)
+    if not st.session_state.deps_loaded:
+        deps = load_dependencies()
+        go = deps['go']
+        st.session_state.deps_loaded = True
+    else:
+        deps = load_dependencies()
+        go = deps['go']
     
     # Overall Score Section with Premium Design
     st.markdown("---")
@@ -639,6 +670,12 @@ def display_report(report):
         """, unsafe_allow_html=True)
 
 def main():
+    # Show welcome message on first load
+    if not st.session_state.get('app_initialized', False):
+        with st.spinner('🚀 Initializing Pattern Pulse...'):
+            # This allows the page to render quickly first
+            st.session_state.app_initialized = True
+    
     # Professional Header with Gradient
     st.markdown('''
         <div style="text-align: center; padding: 2rem 0 1rem 0;">
@@ -649,6 +686,11 @@ def main():
     
     # Sidebar
     with st.sidebar:
+        # Performance note (only show once)
+        if not st.session_state.get('perf_note_shown', False):
+            st.info("⚡ **First Load**: App may take 10-15 seconds to wake up. Subsequent visits are faster!")
+            st.session_state.perf_note_shown = True
+        
         # Mode Selection
         analysis_mode = st.radio(
             "📊 Analysis Mode",
@@ -937,6 +979,12 @@ def main():
                     else:
                         # Run analysis only if file upload succeeded
                         try:
+                            with st.spinner("Loading analysis tools..."):
+                                # Load dependencies
+                                deps = load_dependencies()
+                                QualityManagementAgent = deps['QualityManagementAgent']
+                                parse_multiple_reports = deps['parse_multiple_reports']
+                            
                             with st.spinner("Analyzing PDFs..."):
                                 # Initialize agent in PDF mode
                                 agent = QualityManagementAgent(use_ai=True, pdf_mode=True)
@@ -1028,6 +1076,11 @@ def main():
                 st.error("⚠️ **Missing Information:** Please enter a company ticker or name")
             else:
                 try:
+                    with st.spinner("Loading analysis tools..."):
+                        # Load dependencies
+                        deps = load_dependencies()
+                        QualityManagementAgent = deps['QualityManagementAgent']
+                    
                     with st.spinner(f"🔍 Fetching financial data for **{company_identifier}**..."):
                         # Initialize agent
                         agent = QualityManagementAgent(use_ai=True, pdf_mode=False)
@@ -1080,6 +1133,11 @@ def main():
         
         with col2:
             if st.button("📝 Generate Professional PDF Report", use_container_width=True, type="primary"):
+                with st.spinner("Loading PDF generator..."):
+                    # Load dependencies
+                    deps = load_dependencies()
+                    generate_institutional_pdf = deps['generate_institutional_pdf']
+                
                 with st.spinner("Generating institutional-grade PDF report..."):
                     try:
                         report = st.session_state.report
