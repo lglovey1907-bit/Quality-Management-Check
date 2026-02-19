@@ -324,22 +324,31 @@ def display_report(report):
     # Category Scores with Modern Design
     st.markdown("## 📈 Detailed Category Analysis")
     
-    # Create a dictionary mapping category names to scores
+    # Create a dictionary mapping category names to full CategoryScore objects
     category_score_map = {}
     if hasattr(report, 'category_scores') and report.category_scores:
         for cat_score in report.category_scores:
-            category_score_map[cat_score.category] = cat_score.score
+            category_score_map[cat_score.category] = cat_score
     
-    # Define expected categories with fallback to 0.0 if not found
-    categories = [
-        ("Profitability & Margins", category_score_map.get("Profitability & Margins", 0.0)),
-        ("Growth & Revenue Stability", category_score_map.get("Growth & Revenue Stability", 0.0)),
-        ("Financial Health & Leverage", category_score_map.get("Financial Health & Leverage", 0.0)),
-        ("Cash Flow Management", category_score_map.get("Cash Flow Management", 0.0)),
-        ("Capital Efficiency & Returns", category_score_map.get("Capital Efficiency & Returns", 0.0)),
-        ("Quality of Earnings", category_score_map.get("Quality of Earnings", 0.0)),
-        ("Management & Governance Indicators", category_score_map.get("Management & Governance Indicators", 0.0))
+    # Define expected categories with fallback
+    category_names_list = [
+        "Profitability & Margins",
+        "Growth & Revenue Stability",
+        "Financial Health & Leverage",
+        "Cash Flow Management",
+        "Capital Efficiency & Returns",
+        "Quality of Earnings",
+        "Management & Governance Indicators"
     ]
+    
+    # Build categories list with full objects
+    categories = []
+    for cat_name in category_names_list:
+        cat_obj = category_score_map.get(cat_name)
+        if cat_obj:
+            categories.append((cat_name, cat_obj.score, cat_obj.explanation))
+        else:
+            categories.append((cat_name, 0.0, "No data available for this category."))
     
     # Create modern tabs
     tab1, tab2, tab3 = st.tabs(["📊 Scorecard", "📈 Visual Analytics", "⚠️ Risk Alerts"])
@@ -348,7 +357,7 @@ def display_report(report):
         # Display category scores in attractive cards with two columns
         col1, col2 = st.columns(2)
         
-        for idx, (category, score) in enumerate(categories):
+        for idx, (category, score, explanation) in enumerate(categories):
             target_col = col1 if idx % 2 == 0 else col2
             
             with target_col:
@@ -376,7 +385,7 @@ def display_report(report):
                 
                 st.markdown(f"""
                     <div style='padding: 1.5rem; background: {bg_gradient}; 
-                                border-radius: 12px; margin-bottom: 1rem; 
+                                border-radius: 12px; margin-bottom: 0.5rem; 
                                 border-left: 5px solid {color};
                                 box-shadow: 0 4px 6px rgba(0,0,0,0.07);'>
                         <h4 style='margin: 0 0 1rem 0; color: #1e293b; font-weight: 600;'>{category}</h4>
@@ -388,6 +397,18 @@ def display_report(report):
                 """, unsafe_allow_html=True)
                 
                 st.progress(score / 10.0)
+                
+                # Display reasoning/explanation below the scorecard
+                st.markdown(f"""
+                    <div style='padding: 1rem; background: white; 
+                                border-radius: 8px; margin-bottom: 1.5rem;
+                                border: 1px solid #e2e8f0;
+                                box-shadow: 0 2px 4px rgba(0,0,0,0.05);'>
+                        <p style='margin: 0; color: #475569; font-size: 0.9rem; line-height: 1.6;'>
+                            <strong style='color: #1e293b;'>💡 Analysis:</strong> {explanation}
+                        </p>
+                    </div>
+                """, unsafe_allow_html=True)
     
     with tab2:
         # Professional visualizations
