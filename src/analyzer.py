@@ -47,6 +47,49 @@ class RedFlag:
 
 
 @dataclass
+class ManagementQualityAssessment:
+    """Comprehensive management quality evaluation"""
+    # 1. Management Guidance vs Reality
+    guidance_vs_reality: Dict[str, str] = field(default_factory=dict)  # metric: achievement status
+    achievement_rating: str = ""  # Achieved/Partially Achieved/Not Achieved/Over-promised
+    
+    # 2. Consistency & Honesty
+    narrative_consistency: str = ""  # High/Medium/Low
+    accepts_mistakes: bool = False
+    external_blame_pattern: bool = False
+    
+    # 3. Visibility of Business
+    business_visibility: str = ""  # High/Medium/Low
+    clarity_score: int = 0  # 1-10
+    provides_numbers: bool = False
+    
+    # 4. Vision & Long-Term Thinking
+    vision_quality: str = ""  # Excellent/Good/Average/Weak
+    long_term_focus: bool = False
+    strategic_initiatives: List[str] = field(default_factory=list)
+    
+    # 5. Capital Allocation Skill
+    capital_allocation_rating: str = ""  # Excellent/Good/Average/Poor
+    allocation_analysis: str = ""
+    bad_acquisitions: List[str] = field(default_factory=list)
+    
+    # 6. Shareholder Respect
+    communication_quality: str = ""  # Excellent/Good/Average/Poor
+    transparency_rating: str = ""  # High/Medium/Low
+    answers_tough_questions: bool = False
+    
+    # 7. Red Flags
+    management_red_flags: List[str] = field(default_factory=list)
+    
+    # 8. Overall Management Score
+    management_score: float = 0.0  # 0-10
+    management_category: str = ""  # Excellent/Good/Average/Weak
+    
+    # Detailed analysis
+    detailed_analysis: str = ""
+
+
+@dataclass
 class QualityReport:
     """Complete quality management report"""
     company_name: str
@@ -61,6 +104,9 @@ class QualityReport:
     # Findings
     key_strengths: List[str] = field(default_factory=list)
     red_flags: List[RedFlag] = field(default_factory=list)
+    
+    # Management Quality Assessment
+    management_quality_assessment: Optional['ManagementQualityAssessment'] = None
     
     # Summary
     executive_summary: str = ""
@@ -184,13 +230,42 @@ class QualityAnalyzer:
         
         score = max(0, min(10, score))
         
+        # Build detailed explanation with figures
+        explanation_parts = []
+        
+        # Add operating margin analysis
+        if data.operating_margin:
+            margins = list(data.operating_margin.values())
+            avg_margin = sum(margins) / len(margins) if margins else 0
+            trend = "improving" if len(margins) >= 2 and margins[0] > margins[-1] else "stable" if len(margins) >= 2 and abs(margins[0] - margins[-1]) < 1 else "declining"
+            explanation_parts.append(f"Operating Margin: {avg_margin:.1f}% average over {len(margins)} years ({trend} trend)")
+        
+        # Add net margin analysis
+        if data.net_margin:
+            net_margins = list(data.net_margin.values())
+            avg_net = sum(net_margins) / len(net_margins) if net_margins else 0
+            explanation_parts.append(f"Net Profit Margin: {avg_net:.1f}% average")
+        
+        # Add ROE analysis
+        if data.roe:
+            roe_values = [v for v in data.roe.values() if isinstance(v, (int, float))]
+            if roe_values:
+                avg_roe = sum(roe_values) / len(roe_values)
+                explanation_parts.append(f"Return on Equity (ROE): {avg_roe:.1f}% average, indicating {'excellent' if avg_roe > 20 else 'good' if avg_roe > 15 else 'moderate'} capital efficiency")
+        
+        # Combine into detailed explanation
+        if explanation_parts:
+            detailed_explanation = "Profitability Analysis: " + "; ".join(explanation_parts) + f". Overall profitability is {'excellent' if score >= 7.5 else 'strong' if score >= 6.5 else 'moderate' if score >= 5.5 else 'concerning'}."
+        else:
+            detailed_explanation = "Assessment of profit margins, ROE, and overall profitability trends."
+        
         return QualityScore(
             category=ScoreCategory.PROFITABILITY.value,
             score=score,
             weight=self.CATEGORY_WEIGHTS[ScoreCategory.PROFITABILITY],
             strengths=strengths,
             concerns=concerns,
-            explanation="Assessment of profit margins, ROE, and overall profitability trends"
+            explanation=detailed_explanation
         )
     
     def _analyze_growth(self, data: FinancialData) -> QualityScore:
@@ -257,13 +332,51 @@ class QualityAnalyzer:
         
         score = max(0, min(10, score))
         
+        # Build detailed explanation with figures
+        explanation_parts = []
+        
+        # Add revenue growth analysis
+        if data.revenue and len(data.revenue) >= 2:
+            revenues = list(data.revenue.values())
+            if revenues[0] and revenues[-1] and revenues[-1] > 0:
+                num_years = len(revenues) - 1
+                if num_years > 0:
+                    cagr = ((revenues[0] / revenues[-1]) ** (1/num_years) - 1) * 100
+                    explanation_parts.append(f"Revenue CAGR: {cagr:.1f}% over {num_years} years")
+                    
+                    # Add consistency info
+                    growth_rates = []
+                    for i in range(len(revenues) - 1):
+                        if revenues[i+1] > 0:
+                            growth = (revenues[i] - revenues[i+1]) / revenues[i+1] * 100
+                            growth_rates.append(growth)
+                    
+                    if growth_rates:
+                        positive_years = sum(1 for g in growth_rates if g > 0)
+                        explanation_parts.append(f"Growth consistency: {positive_years}/{len(growth_rates)} years positive")
+        
+        # Add profit growth analysis
+        if data.net_income and len(data.net_income) >= 2:
+            profits = list(data.net_income.values())
+            if profits[0] and profits[-1] and profits[-1] > 0 and profits[0] > 0:
+                num_years = len(profits) - 1
+                if num_years > 0:
+                    profit_cagr = ((profits[0] / profits[-1]) ** (1/num_years) - 1) * 100
+                    explanation_parts.append(f"Profit CAGR: {profit_cagr:.1f}%")
+        
+        # Combine into detailed explanation
+        if explanation_parts:
+            detailed_explanation = "Growth & Revenue Stability: " + "; ".join(explanation_parts) + f". Overall growth momentum is {'excellent' if score >= 7.5 else 'strong' if score >= 6.5 else 'moderate' if score >= 5.5 else 'weak'}."
+        else:
+            detailed_explanation = "Assessment of revenue and profit growth trends and consistency."
+        
         return QualityScore(
             category=ScoreCategory.GROWTH.value,
             score=score,
             weight=self.CATEGORY_WEIGHTS[ScoreCategory.GROWTH],
             strengths=strengths,
             concerns=concerns,
-            explanation="Assessment of revenue and profit growth trends and consistency"
+            explanation=detailed_explanation
         )
     
     def _analyze_financial_health(self, data: FinancialData) -> QualityScore:
@@ -337,13 +450,45 @@ class QualityAnalyzer:
         
         score = max(0, min(10, score))
         
+        # Build detailed explanation with figures
+        explanation_parts = []
+        
+        # Add debt to equity analysis
+        if data.debt_to_equity:
+            de_values = list(data.debt_to_equity.values())
+            if de_values:
+                avg_de = sum(de_values) / len(de_values)
+                latest_de = de_values[0]
+                trend = "increasing" if len(de_values) >= 2 and de_values[0] > de_values[-1] * 1.1 else "stable"
+                explanation_parts.append(f"Debt-to-Equity: {latest_de:.2f} (avg: {avg_de:.2f}, {trend})")
+        
+        # Add interest coverage analysis
+        if data.interest_coverage:
+            ic_values = list(data.interest_coverage.values())
+            if ic_values:
+                avg_ic = sum(ic_values) / len(ic_values)
+                explanation_parts.append(f"Interest Coverage: {avg_ic:.1f}x (debt servicing {'comfortable' if avg_ic > 5 else 'manageable' if avg_ic > 3 else 'concerning'})")
+        
+        # Add current ratio analysis
+        if data.current_ratio:
+            cr_values = list(data.current_ratio.values())
+            if cr_values:
+                avg_cr = sum(cr_values) / len(cr_values)
+                explanation_parts.append(f"Current Ratio: {avg_cr:.2f} ({'strong' if avg_cr > 2 else 'adequate' if avg_cr > 1.5 else 'weak'} liquidity)")
+        
+        # Combine into detailed explanation
+        if explanation_parts:
+            detailed_explanation = "Financial Health & Leverage: " + "; ".join(explanation_parts) + f". Overall financial stability is {'excellent' if score >= 7.5 else 'strong' if score >= 6.5 else 'moderate' if score >= 5.5 else 'concerning'}."
+        else:
+            detailed_explanation = "Assessment of leverage, liquidity, and overall financial stability."
+        
         return QualityScore(
             category=ScoreCategory.FINANCIAL_HEALTH.value,
             score=score,
             weight=self.CATEGORY_WEIGHTS[ScoreCategory.FINANCIAL_HEALTH],
             strengths=strengths,
             concerns=concerns,
-            explanation="Assessment of leverage, liquidity, and overall financial stability"
+            explanation=detailed_explanation
         )
     
     def _analyze_cash_management(self, data: FinancialData) -> QualityScore:
@@ -409,13 +554,47 @@ class QualityAnalyzer:
         
         score = max(0, min(10, score))
         
+        # Build detailed explanation with figures
+        explanation_parts = []
+        
+        # Add operating cash flow analysis
+        if data.operating_cash_flow:
+            ocf_values = list(data.operating_cash_flow.values())
+            if ocf_values:
+                positive_ocf = sum(1 for v in ocf_values if v > 0)
+                avg_ocf = sum(ocf_values) / len(ocf_values) / 1e6 if ocf_values else 0  # Convert to millions
+                explanation_parts.append(f"Operating Cash Flow: {positive_ocf}/{len(ocf_values)} years positive (avg: ${avg_ocf:.1f}M)")
+        
+        # Add OCF to Net Income comparison
+        if data.operating_cash_flow and data.net_income:
+            ocf_list = list(data.operating_cash_flow.values())
+            ni_list = list(data.net_income.values())
+            
+            if ocf_list and ni_list:
+                years_with_both = min(len(ocf_list), len(ni_list))
+                ocf_greater = sum(1 for i in range(years_with_both) if ni_list[i] > 0 and ocf_list[i] > ni_list[i])
+                explanation_parts.append(f"OCF exceeds Net Income in {ocf_greater}/{years_with_both} years ({'strong' if ocf_greater == years_with_both else 'moderate'} earnings quality)")
+        
+        # Add free cash flow analysis
+        if data.free_cash_flow:
+            fcf_values = list(data.free_cash_flow.values())
+            if fcf_values:
+                positive_fcf = sum(1 for v in fcf_values if v > 0)
+                explanation_parts.append(f"Free Cash Flow: {positive_fcf}/{len(fcf_values)} years positive")
+        
+        # Combine into detailed explanation
+        if explanation_parts:
+            detailed_explanation = "Cash Flow Management: " + "; ".join(explanation_parts) + f". Overall cash generation is {'excellent' if score >= 7.5 else 'strong' if score >= 6.5 else 'moderate' if score >= 5.5 else 'weak'}."
+        else:
+            detailed_explanation = "Assessment of cash flow generation and quality."
+        
         return QualityScore(
             category=ScoreCategory.CASH_MANAGEMENT.value,
             score=score,
             weight=self.CATEGORY_WEIGHTS[ScoreCategory.CASH_MANAGEMENT],
             strengths=strengths,
             concerns=concerns,
-            explanation="Assessment of cash flow generation and quality"
+            explanation=detailed_explanation
         )
     
     def _analyze_capital_efficiency(self, data: FinancialData) -> QualityScore:
@@ -481,13 +660,50 @@ class QualityAnalyzer:
         
         score = max(0, min(10, score))
         
+        # Build detailed explanation with figures
+        explanation_parts = []
+        
+        # Add ROCE analysis
+        if data.roce:
+            roce_values = [v for v in data.roce.values() if isinstance(v, (int, float))]
+            if roce_values:
+                avg_roce = sum(roce_values) / len(roce_values)
+                consistency = "consistent" if len(roce_values) >= 3 and all(r > 15 for r in roce_values) else "variable"
+                explanation_parts.append(f"Return on Capital Employed (ROCE): {avg_roce:.1f}% average ({consistency})")
+        
+        # Add ROA analysis
+        if data.roa:
+            roa_values = list(data.roa.values())
+            if roa_values:
+                avg_roa = sum(roa_values) / len(roa_values)
+                explanation_parts.append(f"Return on Assets (ROA): {avg_roa:.1f}% average")
+        
+        # Add asset turnover analysis
+        if data.revenue and data.total_assets:
+            years = set(data.revenue.keys()) & set(data.total_assets.keys())
+            if years:
+                turnovers = []
+                for year in years:
+                    if data.total_assets[year] > 0:
+                        turnovers.append(data.revenue[year] / data.total_assets[year])
+                
+                if turnovers:
+                    avg_turnover = sum(turnovers) / len(turnovers)
+                    explanation_parts.append(f"Asset Turnover: {avg_turnover:.2f}x ({'efficient' if avg_turnover > 1.0 else 'moderate'} utilization)")
+        
+        # Combine into detailed explanation
+        if explanation_parts:
+            detailed_explanation = "Capital Efficiency & Returns: " + "; ".join(explanation_parts) + f". Overall capital deployment is {'excellent' if score >= 7.5 else 'strong' if score >= 6.5 else 'moderate' if score >= 5.5 else 'inefficient'}."
+        else:
+            detailed_explanation = "Assessment of return on capital and asset efficiency."
+        
         return QualityScore(
             category=ScoreCategory.CAPITAL_EFFICIENCY.value,
             score=score,
             weight=self.CATEGORY_WEIGHTS[ScoreCategory.CAPITAL_EFFICIENCY],
             strengths=strengths,
             concerns=concerns,
-            explanation="Assessment of return on capital and asset efficiency"
+            explanation=detailed_explanation
         )
     
     def _analyze_earnings_quality(self, data: FinancialData) -> QualityScore:
@@ -556,13 +772,53 @@ class QualityAnalyzer:
         
         score = max(0, min(10, score))
         
+        # Build detailed explanation with figures
+        explanation_parts = []
+        
+        # Add accruals analysis
+        if data.operating_cash_flow and data.net_income:
+            ocf_list = list(data.operating_cash_flow.values())
+            ni_list = list(data.net_income.values())
+            
+            if ocf_list and ni_list:
+                years = min(len(ocf_list), len(ni_list))
+                total_accruals = sum(ni_list[i] - ocf_list[i] for i in range(years) if ni_list[i] > 0)
+                total_ocf = sum(ocf_list)
+                
+                if total_ocf > 0:
+                    accrual_ratio = total_accruals / total_ocf
+                    explanation_parts.append(f"Accruals Ratio: {accrual_ratio:.2f} ({'low - high cash quality' if accrual_ratio < 0.1 else 'moderate' if accrual_ratio < 0.3 else 'high - quality concerns'})")
+        
+        # Add earnings volatility analysis
+        if data.net_income and len(data.net_income) >= 3:
+            profits = list(data.net_income.values())
+            avg_profit = sum(profits) / len(profits)
+            
+            if avg_profit > 0:
+                variance = sum((p - avg_profit) ** 2 for p in profits) / len(profits)
+                std_dev = variance ** 0.5
+                cv = std_dev / avg_profit
+                explanation_parts.append(f"Earnings Volatility (CV): {cv:.2f} ({'stable' if cv < 0.2 else 'moderate' if cv < 0.5 else 'volatile'})")
+        
+        # Add margin stability analysis
+        if data.operating_margin and len(data.operating_margin) >= 2:
+            margins = list(data.operating_margin.values())
+            margin_range = max(margins) - min(margins)
+            explanation_parts.append(f"Margin Stability: {margin_range:.1f}% range ({'consistent' if margin_range < 3 else 'variable' if margin_range < 10 else 'volatile'})")
+        
+        # Combine into detailed explanation
+        if explanation_parts:
+            detailed_explanation = "Quality of Earnings: " + "; ".join(explanation_parts) + f". Overall earnings quality is {'excellent' if score >= 7.5 else 'strong' if score >= 6.5 else 'acceptable' if score >= 5.5 else 'concerning'}."
+        else:
+            detailed_explanation = "Assessment of earnings sustainability and accounting quality."
+        
         return QualityScore(
             category=ScoreCategory.QUALITY_EARNINGS.value,
             score=score,
             weight=self.CATEGORY_WEIGHTS[ScoreCategory.QUALITY_EARNINGS],
             strengths=strengths,
             concerns=concerns,
-            explanation="Assessment of earnings sustainability and accounting quality"
+            explanation=detailed_explanation
         )
     
     def _analyze_governance(self, data: FinancialData) -> QualityScore:
@@ -611,13 +867,49 @@ class QualityAnalyzer:
         
         score = max(0, min(10, score))
         
+        # Build detailed explanation with figures
+        explanation_parts = []
+        
+        # Add dividend policy analysis
+        if data.dividend_yield:
+            explanation_parts.append(f"Dividend Yield: {data.dividend_yield:.1f}% ({'shareholder-friendly' if data.dividend_yield > 2 else 'maintained'})")
+        
+        # Add reporting consistency
+        if data.revenue and len(data.revenue) >= data.years_analyzed:
+            explanation_parts.append(f"Financial Reporting: Complete {data.years_analyzed}-year data available")
+        
+        # Add capital allocation analysis
+        if data.free_cash_flow:
+            fcf_values = list(data.free_cash_flow.values())
+            positive_fcf = sum(1 for v in fcf_values if v > 0)
+            explanation_parts.append(f"Capital Discipline: Positive FCF in {positive_fcf}/{len(fcf_values)} years")
+        
+        # Add accounting quality check
+        if data.net_income and data.operating_cash_flow:
+            ni_list = list(data.net_income.values())
+            ocf_list = list(data.operating_cash_flow.values())
+            
+            concern_years = sum(1 for i in range(min(len(ni_list), len(ocf_list))) 
+                              if ni_list[i] > 0 and ocf_list[i] > 0 and ni_list[i] > ocf_list[i] * 1.5)
+            
+            if concern_years > 0:
+                explanation_parts.append(f"Accounting Quality: NI>OCF in {concern_years} years ({'concern' if concern_years >= 2 else 'monitor'})")
+            else:
+                explanation_parts.append("Accounting Quality: Clean pattern")
+        
+        # Combine into detailed explanation
+        if explanation_parts:
+            detailed_explanation = "Management & Governance: " + "; ".join(explanation_parts) + f". Overall management quality indicators are {'excellent' if score >= 7.5 else 'strong' if score >= 6.5 else 'acceptable' if score >= 5.5 else 'concerning'}."
+        else:
+            detailed_explanation = "Assessment of management quality through financial indicators."
+        
         return QualityScore(
             category=ScoreCategory.GOVERNANCE.value,
             score=score,
             weight=self.CATEGORY_WEIGHTS[ScoreCategory.GOVERNANCE],
             strengths=strengths,
             concerns=concerns,
-            explanation="Assessment of management quality through financial indicators"
+            explanation=detailed_explanation
         )
     
     def _calculate_overall_score(self, category_scores: List[QualityScore]) -> float:
@@ -818,6 +1110,9 @@ class AIEnhancedAnalyzer:
             # Generate risk assessment
             report.risk_assessment = self._generate_risk_assessment(context)
             
+            # Generate management quality assessment
+            report.management_quality_assessment = self._analyze_management_quality(fin_data, report)
+            
         except Exception as e:
             print(f"AI enhancement failed: {e}")
             # Fall back to basic summaries
@@ -955,3 +1250,286 @@ Key risks identified:
 
 Monitor these factors as they may impact future performance and investment returns.
 """.strip()
+    
+    def _analyze_management_quality(self, fin_data: FinancialData, report: QualityReport) -> ManagementQualityAssessment:
+        """Comprehensive management quality assessment using AI"""
+        if not self.client:
+            # Return basic assessment without AI
+            return self._generate_basic_management_assessment(fin_data, report)
+        
+        try:
+            # Prepare detailed financial context
+            context = self._prepare_management_context(fin_data, report)
+            
+            # Use AI to analyze management quality
+            prompt = f"""You are an expert financial analyst evaluating management quality. Analyze the following company data and provide a comprehensive management quality assessment.
+
+{context}
+
+Please provide a detailed analysis covering these 8 areas:
+
+1️⃣ **Management Guidance vs Reality**
+   - What did management promise in previous years (revenue growth, profit, margins, expansions, ROE, ROCE)?
+   - Did they achieve, partially achieve, or fail?
+   - Rating: Achieved / Partially Achieved / Not Achieved / Over-promised
+   
+2️⃣ **Consistency & Honesty**
+   - Is the narrative consistent across years or constantly changing?
+   - Do they accept mistakes openly?
+   - Do they blame external factors repeatedly?
+   - Rating: High / Medium / Low consistency
+   
+3️⃣ **Visibility of Business**
+   - Does management clearly explain the next 1-3 years?
+   - Do they provide clear numbers or only vague statements?
+   - Rating: High / Medium / Low visibility
+   
+4️⃣ **Vision & Long-Term Thinking**
+   - Are they focused on 5-10 year vision?
+   - Talking about capex, new markets, technology, brand, moat?
+   - Is the vision practical or just fancy words?
+   - Rating: Excellent / Good / Average / Weak
+   
+5️⃣ **Capital Allocation Skill**
+   - How they used profits and cash (capex, acquisitions, debt reduction, dividends)?
+   - Any value-destructive decisions?
+   - Rating: Excellent / Good / Average / Poor
+   
+6️⃣ **Shareholder Respect**
+   - Quality of communication and transparency
+   - Do they answer tough questions clearly?
+   - Rating: High / Medium / Low
+   
+7️⃣ **Red Flags**
+   - Repeated delays
+   - Constant changes in guidance
+   - Aggressive language without backing
+   - Related party concerns
+   
+8️⃣ **Overall Management Quality Score**
+   - Score from 1 to 10
+   - Category: Excellent (8-10) / Good (6-7.9) / Average (4-5.9) / Weak (<4)
+
+Respond in JSON format with this structure:
+{{
+    "guidance_vs_reality": {{"revenue_growth": "Achieved", "margin_expansion": "Partially Achieved"}},
+    "achievement_rating": "Achieved/Partially Achieved/Not Achieved/Over-promised",
+    "narrative_consistency": "High/Medium/Low",
+    "accepts_mistakes": true/false,
+    "external_blame_pattern": true/false,
+    "business_visibility": "High/Medium/Low",
+    "clarity_score": 1-10,
+    "provides_numbers": true/false,
+    "vision_quality": "Excellent/Good/Average/Weak",
+    "long_term_focus": true/false,
+    "strategic_initiatives": ["initiative1", "initiative2"],
+    "capital_allocation_rating": "Excellent/Good/Average/Poor",
+    "allocation_analysis": "detailed analysis...",
+    "bad_acquisitions": ["acquisition1" if any],
+    "communication_quality": "Excellent/Good/Average/Poor",
+    "transparency_rating": "High/Medium/Low",
+    "answers_tough_questions": true/false,
+    "management_red_flags": ["flag1", "flag2"],
+    "management_score": 7.5,
+    "management_category": "Excellent/Good/Average/Weak",
+    "detailed_analysis": "comprehensive analysis covering all 8 points..."
+}}
+"""
+            
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a financial analyst specializing in management quality assessment. Provide objective, data-driven analysis."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.3,
+                max_tokens=2000
+            )
+            
+            # Parse AI response
+            ai_response = response.choices[0].message.content.strip()
+            
+            # Extract JSON from response (handle markdown code blocks)
+            if "```json" in ai_response:
+                ai_response = ai_response.split("```json")[1].split("```")[0].strip()
+            elif "```" in ai_response:
+                ai_response = ai_response.split("```")[1].split("```")[0].strip()
+            
+            assessment_data = json.loads(ai_response)
+            
+            # Create ManagementQualityAssessment object
+            assessment = ManagementQualityAssessment(
+                guidance_vs_reality=assessment_data.get("guidance_vs_reality", {}),
+                achievement_rating=assessment_data.get("achievement_rating", "Not Assessed"),
+                narrative_consistency=assessment_data.get("narrative_consistency", "Medium"),
+                accepts_mistakes=assessment_data.get("accepts_mistakes", False),
+                external_blame_pattern=assessment_data.get("external_blame_pattern", False),
+                business_visibility=assessment_data.get("business_visibility", "Medium"),
+                clarity_score=assessment_data.get("clarity_score", 5),
+                provides_numbers=assessment_data.get("provides_numbers", False),
+                vision_quality=assessment_data.get("vision_quality", "Average"),
+                long_term_focus=assessment_data.get("long_term_focus", False),
+                strategic_initiatives=assessment_data.get("strategic_initiatives", []),
+                capital_allocation_rating=assessment_data.get("capital_allocation_rating", "Average"),
+                allocation_analysis=assessment_data.get("allocation_analysis", ""),
+                bad_acquisitions=assessment_data.get("bad_acquisitions", []),
+                communication_quality=assessment_data.get("communication_quality", "Average"),
+                transparency_rating=assessment_data.get("transparency_rating", "Medium"),
+                answers_tough_questions=assessment_data.get("answers_tough_questions", False),
+                management_red_flags=assessment_data.get("management_red_flags", []),
+                management_score=assessment_data.get("management_score", 5.0),
+                management_category=assessment_data.get("management_category", "Average"),
+                detailed_analysis=assessment_data.get("detailed_analysis", "")
+            )
+            
+            return assessment
+            
+        except Exception as e:
+            print(f"Management quality assessment failed: {e}")
+            return self._generate_basic_management_assessment(fin_data, report)
+    
+    def _prepare_management_context(self, fin_data: FinancialData, report: QualityReport) -> str:
+        """Prepare context for management quality analysis"""
+        # Build comprehensive context from financial data and report
+        context = f"""
+COMPANY: {fin_data.company_name} ({fin_data.ticker})
+SECTOR: {fin_data.sector} | INDUSTRY: {fin_data.industry}
+ANALYSIS PERIOD: {fin_data.years_analyzed} years
+
+FINANCIAL PERFORMANCE TRENDS:
+Revenue Growth: {self._calculate_cagr(fin_data.revenue) if fin_data.revenue else 'N/A'}%
+Profit Growth: {self._calculate_cagr(fin_data.net_income) if fin_data.net_income else 'N/A'}%
+Operating Margin Trend: {self._analyze_trend(fin_data.operating_margin) if fin_data.operating_margin else 'N/A'}
+ROE Trend: {self._analyze_trend(fin_data.roe) if fin_data.roe else 'N/A'}
+ROCE Trend: {self._analyze_trend(fin_data.roce) if fin_data.roce else 'N/A'}
+
+CAPITAL ALLOCATION:
+Cash Flow from Operations: {list(fin_data.operating_cash_flow.values()) if fin_data.operating_cash_flow else 'N/A'}
+Free Cash Flow: {list(fin_data.free_cash_flow.values()) if fin_data.free_cash_flow else 'N/A'}
+Capex Trend: Analyzing capital expenditure patterns
+Debt Management: D/E ratio trends {list(fin_data.debt_to_equity.values()) if fin_data.debt_to_equity else 'N/A'}
+Dividend Policy: {fin_data.dividend_yield if hasattr(fin_data, 'dividend_yield') else 'N/A'}%
+
+QUALITY METRICS:
+Overall Quality Score: {report.overall_score}/10
+Key Strengths: {', '.join(report.key_strengths[:3])}
+Red Flags: {len(report.red_flags)} identified
+Earnings Quality: {'High' if any('cash' in s.lower() for s in report.key_strengths) else 'Moderate'}
+
+CONSISTENCY INDICATORS:
+Revenue Consistency: {self._check_consistency(fin_data.revenue) if fin_data.revenue else 'N/A'}
+Margin Stability: {self._check_consistency(fin_data.operating_margin) if fin_data.operating_margin else 'N/A'}
+Cash Flow Reliability: {self._check_consistency(fin_data.operating_cash_flow) if fin_data.operating_cash_flow else 'N/A'}
+"""
+        return context.strip()
+    
+    def _calculate_cagr(self, data_dict: Dict) -> str:
+        """Calculate CAGR from dictionary of values"""
+        if not data_dict or len(data_dict) < 2:
+            return "Insufficient data"
+        
+        values = list(data_dict.values())
+        if values[0] and values[-1] and values[-1] > 0:
+            years = len(values) - 1
+            cagr = ((values[0] / values[-1]) ** (1/years) - 1) * 100
+            return f"{cagr:.1f}"
+        return "N/A"
+    
+    def _analyze_trend(self, data_dict: Dict) -> str:
+        """Analyze trend direction"""
+        if not data_dict or len(data_dict) < 2:
+            return "Insufficient data"
+        
+        values = list(data_dict.values())
+        if values[0] > values[-1] * 1.1:
+            return "Improving"
+        elif values[0] < values[-1] * 0.9:
+            return "Declining"
+        else:
+            return "Stable"
+    
+    def _check_consistency(self, data_dict: Dict) -> str:
+        """Check consistency of values"""
+        if not data_dict or len(data_dict) < 3:
+            return "Insufficient data"
+        
+        values = [v for v in data_dict.values() if v is not None]
+        if not values:
+            return "No data"
+        
+        avg = sum(values) / len(values)
+        if avg == 0:
+            return "No meaningful data"
+        
+        variance = sum((v - avg) ** 2 for v in values) / len(values)
+        std_dev = variance ** 0.5
+        cv = std_dev / avg
+        
+        if cv < 0.15:
+            return "High (Consistent)"
+        elif cv < 0.30:
+            return "Medium (Moderate variation)"
+        else:
+            return "Low (High variation)"
+    
+    def _generate_basic_management_assessment(self, fin_data: FinancialData, report: QualityReport) -> ManagementQualityAssessment:
+        """Generate basic management assessment without AI"""
+        # Calculate basic metrics for management score
+        score = 5.0
+        
+        # Adjust based on financial performance
+        if report.overall_score >= 7:
+            score += 2
+        elif report.overall_score < 5:
+            score -= 1
+        
+        # Adjust based on growth consistency
+        if fin_data.revenue and len(fin_data.revenue) >= 3:
+            revenues = list(fin_data.revenue.values())
+            positive_growth = sum(1 for i in range(len(revenues)-1) if revenues[i] > revenues[i+1])
+            if positive_growth == len(revenues) - 1:
+                score += 1
+        
+        # Adjust based on cash flow quality
+        if any('cash' in s.lower() for s in report.key_strengths):
+            score += 0.5
+        
+        score = max(1, min(10, score))
+        
+        # Determine category
+        if score >= 8:
+            category = "Excellent"
+        elif score >= 6:
+            category = "Good"
+        elif score >= 4:
+            category = "Average"
+        else:
+            category = "Weak"
+        
+        return ManagementQualityAssessment(
+            achievement_rating="Analysis based on financial metrics only",
+            narrative_consistency="Medium",
+            business_visibility="Medium",
+            clarity_score=int(score),
+            vision_quality="Average",
+            capital_allocation_rating="Average",
+            allocation_analysis="Based on financial metrics - detailed analysis requires AI",
+            communication_quality="Average",
+            transparency_rating="Medium",
+            management_score=score,
+            management_category=category,
+            detailed_analysis=f"""
+Basic management assessment (requires AI for detailed analysis):
+
+Overall Score: {score:.1f}/10 - {category}
+
+This assessment is based on quantitative financial metrics including:
+- Overall company quality score: {report.overall_score}/10
+- Growth consistency and performance trends
+- Cash flow quality and capital efficiency
+- Financial health indicators
+
+For detailed management quality analysis including guidance tracking, communication quality, 
+and strategic vision assessment, AI-enhanced analysis is recommended.
+"""
+        )

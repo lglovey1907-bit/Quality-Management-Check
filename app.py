@@ -679,6 +679,197 @@ def display_report(report):
             """, unsafe_allow_html=True)
         st.markdown("---")
     
+    # Management Quality Assessment
+    if hasattr(report, 'management_quality_assessment') and report.management_quality_assessment:
+        mgmt = report.management_quality_assessment
+        
+        st.markdown("## 🏆 Management Quality Assessment")
+        
+        # Overall Management Score Card
+        score = mgmt.management_score
+        category = mgmt.management_category
+        
+        if score >= 8:
+            score_color = "#10b981"
+            score_bg = "linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)"
+        elif score >= 6:
+            score_color = "#3b82f6"
+            score_bg = "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)"
+        elif score >= 4:
+            score_color = "#f59e0b"
+            score_bg = "linear-gradient(135deg, #fed7aa 0%, #fdba74 100%)"
+        else:
+            score_color = "#ef4444"
+            score_bg = "linear-gradient(135deg, #fecaca 0%, #fca5a5 100%)"
+        
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.markdown(f"""
+                <div style='text-align: center; padding: 2rem; background: {score_bg};
+                            border-radius: 16px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); margin-bottom: 2rem;'>
+                    <p style='margin: 0; font-size: 0.9rem; font-weight: 600; color: #1e293b; opacity: 0.8;'>MANAGEMENT QUALITY</p>
+                    <h1 style='margin: 0.5rem 0; font-size: 4rem; font-weight: 800; color: {score_color};'>{score:.1f}</h1>
+                    <p style='margin: 0; font-size: 1.3rem; font-weight: 600; color: {score_color}; letter-spacing: 1px;'>{category}</p>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        # Create tabs for 8 assessment areas
+        mgmt_tabs = st.tabs([
+            "📊 Guidance vs Reality",
+            "🤝 Consistency",
+            "🔍 Visibility",
+            "🚀 Vision",
+            "💰 Capital Allocation",
+            "📘 Shareholder Respect",
+            "🚨 Red Flags",
+            "📝 Summary"
+        ])
+        
+        # Tab 1: Guidance vs Reality
+        with mgmt_tabs[0]:
+            st.markdown("### Management Guidance vs Reality")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown(f"""
+                    <div style='padding: 1.5rem; background: white; border-radius: 10px; border: 2px solid #e5e7eb;'>
+                        <h4 style='margin: 0 0 1rem 0; color: #1e293b;'>Achievement Rating</h4>
+                        <p style='margin: 0; font-size: 1.5rem; font-weight: 700; color: {score_color};'>{mgmt.achievement_rating}</p>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                if mgmt.guidance_vs_reality:
+                    st.markdown("**Key Promises Review:**")
+                    for metric, status in mgmt.guidance_vs_reality.items():
+                        status_icon = "✅" if "achieved" in status.lower() else "⚠️" if "partial" in status.lower() else "❌"
+                        st.markdown(f"{status_icon} **{metric}**: {status}")
+        
+        # Tab 2: Consistency & Honesty
+        with mgmt_tabs[1]:
+            st.markdown("### Consistency & Honesty")
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Narrative Consistency", mgmt.narrative_consistency)
+            with col2:
+                st.metric("Accepts Mistakes", "Yes ✓" if mgmt.accepts_mistakes else "No ✗")
+            with col3:
+                st.metric("External Blame Pattern", "Yes ⚠️" if mgmt.external_blame_pattern else "No ✓")
+            
+            st.info("📌 **What This Means**: " + (
+                "Management maintains consistent messaging and takes accountability for decisions." if mgmt.narrative_consistency == "High" 
+                else "Management communication shows some variability."
+            ))
+        
+        # Tab 3: Visibility of Business
+        with mgmt_tabs[2]:
+            st.markdown("### Business Visibility & Clarity")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                # Visibility gauge
+                visibility_score = {"High": 8, "Medium": 5, "Low": 2}.get(mgmt.business_visibility, 5)
+                st.markdown(f"""
+                    <div style='padding: 1.5rem; background: white; border-radius: 10px; border: 2px solid #e5e7eb; text-align: center;'>
+                        <h4 style='margin: 0 0 1rem 0; color: #1e293b;'>Business Visibility</h4>
+                        <p style='margin: 0; font-size: 2rem; font-weight: 700; color: {score_color};'>{mgmt.business_visibility}</p>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown(f"""
+                    <div style='padding: 1.5rem; background: white; border-radius: 10px; border: 2px solid #e5e7eb; text-align: center;'>
+                        <h4 style='margin: 0 0 1rem 0; color: #1e293b;'>Clarity Score</h4>
+                        <p style='margin: 0; font-size: 2rem; font-weight: 700; color: {score_color};'>{mgmt.clarity_score}/10</p>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            st.markdown("**Provides Specific Numbers**: " + ("✅ Yes" if mgmt.provides_numbers else "❌ No - Uses vague terms"))
+        
+        # Tab 4: Vision & Long-Term Thinking
+        with mgmt_tabs[3]:
+            st.markdown("### Vision & Long-Term Strategy")
+            
+            col1, col2 = st.columns([1, 2])
+            with col1:
+                st.markdown(f"""
+                    <div style='padding: 1.5rem; background: white; border-radius: 10px; border: 2px solid #e5e7eb; text-align: center;'>
+                        <h4 style='margin: 0 0 1rem 0; color: #1e293b;'>Vision Quality</h4>
+                        <p style='margin: 0; font-size: 1.5rem; font-weight: 700; color: {score_color};'>{mgmt.vision_quality}</p>
+                        <p style='margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #64748b;'>{'Long-term Focused ✓' if mgmt.long_term_focus else 'Short-term Focused'}</p>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                if mgmt.strategic_initiatives:
+                    st.markdown("**Strategic Initiatives:**")
+                    for initiative in mgmt.strategic_initiatives:
+                        st.markdown(f"• {initiative}")
+                else:
+                    st.info("No specific strategic initiatives identified in available data.")
+        
+        # Tab 5: Capital Allocation
+        with mgmt_tabs[4]:
+            st.markdown("### Capital Allocation Discipline")
+            
+            st.markdown(f"""
+                <div style='padding: 1.5rem; background: white; border-radius: 10px; border: 2px solid #e5e7eb; margin-bottom: 1rem;'>
+                    <h4 style='margin: 0 0 1rem 0; color: #1e293b;'>Capital Allocation Rating</h4>
+                    <p style='margin: 0; font-size: 1.5rem; font-weight: 700; color: {score_color};'>{mgmt.capital_allocation_rating}</p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            if mgmt.allocation_analysis:
+                st.markdown("**Analysis:**")
+                st.write(mgmt.allocation_analysis)
+            
+            if mgmt.bad_acquisitions:
+                st.warning("**⚠️ Questionable Acquisitions:**")
+                for acq in mgmt.bad_acquisitions:
+                    st.markdown(f"• {acq}")
+        
+        # Tab 6: Shareholder Respect
+        with mgmt_tabs[5]:
+            st.markdown("### Shareholder Communication & Respect")
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Communication Quality", mgmt.communication_quality)
+            with col2:
+                st.metric("Transparency", mgmt.transparency_rating)
+            with col3:
+                st.metric("Answers Tough Questions", "Yes ✓" if mgmt.answers_tough_questions else "Needs Improvement")
+        
+        # Tab 7: Management Red Flags
+        with mgmt_tabs[6]:
+            st.markdown("### 🚨 Management Red Flags")
+            
+            if mgmt.management_red_flags:
+                for idx, flag in enumerate(mgmt.management_red_flags, 1):
+                    st.markdown(f"""
+                        <div style='padding: 1rem; margin: 0.5rem 0; background: #fef2f2;
+                                    border-left: 4px solid #ef4444; border-radius: 8px;'>
+                            <p style='margin: 0; color: #7f1d1d; font-weight: 600;'>⚠️ Red Flag #{idx}</p>
+                            <p style='margin: 0.5rem 0 0 0; color: #991b1b;'>{flag}</p>
+                        </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.success("✅ **No major management red flags identified!**")
+        
+        # Tab 8: Detailed Summary
+        with mgmt_tabs[7]:
+            st.markdown("### Comprehensive Management Analysis")
+            
+            if mgmt.detailed_analysis:
+                st.markdown(f"""
+                    <div style='padding: 2rem; background: white; border-radius: 12px; border: 2px solid #e5e7eb;'>
+                        <p style='margin: 0; color: #1e293b; line-height: 1.8; white-space: pre-wrap;'>{mgmt.detailed_analysis}</p>
+                    </div>
+                """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+    
     # Executive Summary with modern styling
     if hasattr(report, 'executive_summary') and report.executive_summary:
         st.markdown("## 📝 Executive Summary")
