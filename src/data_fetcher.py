@@ -410,13 +410,14 @@ class YahooFinanceFetcher(BaseDataFetcher):
                         for name_field in ['longName', 'shortName', 'name']:
                             if name_field in info and info[name_field]:
                                 company_name = info[name_field]
-                                # Skip if it's just the ticker itself
-                                if company_name.upper() != ticker_symbol.replace('.NS', '').replace('.BO', ''):
+                                # Skip if it's just the ticker itself (without exchange suffix)
+                                base_ticker = ticker_symbol.replace('.NS', '').replace('.BO', '').replace('.', '')
+                                if company_name.upper() != base_ticker and company_name.upper() != ticker:
                                     break
                         
-                        if company_name:
+                        if company_name and company_name.upper() not in [ticker, ticker_symbol]:
                             results.append({'name': company_name, 'ticker': ticker_symbol})
-                            break  # Use first successful result
+                            break  # Use first successful result with proper name
                 except Exception:
                     continue
         except Exception:
@@ -425,7 +426,7 @@ class YahooFinanceFetcher(BaseDataFetcher):
         # Fallback: if no results found, just use ticker
         # Don't add " Stock" suffix as it's not a proper company name
         if not results:
-            # For Indian tickers, prefer .NS variant
+            # For Indian tickers, prefer .NS variant but don't add fake company name
             if ticker in self.INDIAN_TICKERS:
                 results.append({'name': ticker, 'ticker': f"{ticker}.NS"})
             else:
@@ -801,55 +802,81 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
     try:
         # Check if input looks like a ticker (short, uppercase, alphanumeric)
         is_likely_ticker = (
-            len(query) <= 6 and 
+            len(query) <= 10 and 
             query.replace('.', '').replace('-', '').isalnum() and
             query.isupper()
         )
         
+        # Indian stock tickers that need .NS suffix
+        INDIAN_TICKERS = {
+            'TCS', 'RELIANCE', 'INFY', 'HDFCBANK', 'ICICIBANK', 'HINDUNILVR',
+            'SBIN', 'BHARTIARTL', 'ITC', 'KOTAKBANK', 'LT', 'AXISBANK',
+            'WIPRO', 'ASIANPAINT', 'MARUTI', 'HCLTECH', 'SUNPHARMA', 'TITAN',
+            'ULTRACEMCO', 'BAJFINANCE', 'NESTLEIND', 'TECHM', 'POWERGRID',
+            'NTPC', 'TATAMOTORS', 'TATASTEEL', 'JSWSTEEL', 'ONGC', 'COALINDIA',
+            'ADANIENT', 'ADANIPORTS', 'BAJAJFINSV', 'DRREDDY', 'CIPLA', 'EICHERMOT',
+            'GRASIM', 'DIVISLAB', 'BRITANNIA', 'APOLLOHOSP', 'INDUSINDBK', 'M&M',
+            'BPCL', 'HEROMOTOCO', 'HINDALCO', 'TATACONSUM', 'BAJAJ-AUTO', 'UPL'
+        }
+        
+        # For known Indian tickers, add .NS suffix for better API lookups
+        query_variants = [query]
+        if is_likely_ticker:
+            base_query = query.replace('.NS', '').replace('.BO', '')
+            if base_query in INDIAN_TICKERS:
+                if '.NS' not in query and '.BO' not in query:
+                    query_variants.append(f"{base_query}.NS")
+        
         # Try FMP API first if available (most comprehensive)
         if fmp_api_key:
-            try:
-                fmp_fetcher = FMPFetcher(fmp_api_key)
-                matches = fmp_fetcher.search_company(query)
-                if matches:
-                    result['matches'] = matches
-                    result['valid'] = True
-                    result['best_match'] = matches[0]  # First result is usually best match
-                    return result
-            except Exception as e:
-                pass  # Fall through to other sources
+            for query_variant in query_variants:
+                try:
+                    fmp_fetcher = FMPFetcher(fmp_api_key)
+                    matches = fmp_fetcher.search_company(query_variant)
+                    if matches and any(m.get('name', '').upper() not in [query, query_variant, query.replace('.NS', '').replace('.BO', '')] for m in matches):
+                        result['matches'] = matches
+                        result['valid'] = True
+                        result['best_match'] = matches[0]
+                        return result
+                except Exception as e:
+                    pass  # Fall through to other sources
         
         # Try Yahoo Finance if available
         if yf is not None:
-            try:
-                yf_fetcher = YahooFinanceFetcher()
-                matches = yf_fetcher.search_company(query)
-                if matches:
-                    result['matches'] = matches
-                    result['valid'] = True
-                    result['best_match'] = matches[0]
-                    return result
-            except Exception as e:
-                pass  # Continue if Yahoo Finance fails
+            for query_variant in query_variants:
+                try:
+                    yf_fetcher = YahooFinanceFetcher()
+                    matches = yf_fetcher.search_company(query_variant)
+                    # Check if we got a real company name, not just the ticker
+                    if matches and any(m.get('name', '').upper() not in [query, query_variant, query.replace('.NS', '').replace('.BO', '')] for m in matches):
+                        result['matches'] = matches
+                        result['valid'] = True
+                        result['best_match'] = matches[0]
+                        return result
+                except Exception as e:
+                    pass  # Continue if Yahoo Finance fails
         
         # If it looks like a ticker and we have FMP API, try direct ticker lookup
         if is_likely_ticker and fmp_api_key:
-            try:
-                # Direct ticker validation via FMP
-                fmp_fetcher = FMPFetcher(fmp_api_key)
-                profile_url = f"{fmp_fetcher.BASE_URL}/profile/{query}?apikey={fmp_api_key}"
-                response = requests.get(profile_url, timeout=5)
-                if response.status_code == 200 and response.json():
-                    profile = response.json()[0]
-                    result['matches'] = [{
-                        'name': profile.get('companyName', query),
-                        'ticker': query.upper()
-                    }]
-                    result['valid'] = True
-                    result['best_match'] = result['matches'][0]
-                    return result
-            except Exception as e:
-                pass
+            for query_variant in query_variants:
+                try:
+                    # Direct ticker validation via FMP
+                    fmp_fetcher = FMPFetcher(fmp_api_key)
+                    profile_url = f"{fmp_fetcher.BASE_URL}/profile/{query_variant}?apikey={fmp_api_key}"
+                    response = requests.get(profile_url, timeout=5)
+                    if response.status_code == 200 and response.json():
+                        profile = response.json()[0]
+                        company_name = profile.get('companyName', '')
+                        if company_name and company_name.upper() not in [query, query_variant.replace('.NS', '').replace('.BO', '')]:
+                            result['matches'] = [{
+                                'name': company_name,
+                                'ticker': query_variant if '.' in query_variant else query.upper()
+                            }]
+                            result['valid'] = True
+                            result['best_match'] = result['matches'][0]
+                            return result
+                except Exception as e:
+                    pass
         
         # If no matches found, provide helpful error message
         if not result['matches']:
