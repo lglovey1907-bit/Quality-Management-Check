@@ -739,10 +739,11 @@ class MultiSourceFetcher:
 
 def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) -> Dict[str, Any]:
     """
-    Validate company name and fetch matching ticker information
+    Validate company name or ticker and fetch matching information
+    Accepts both company names and ticker symbols for validation
     
     Args:
-        company_name: Company name to validate
+        company_name: Company name or ticker symbol to validate
         fmp_api_key: Optional FMP API key for enhanced search
     
     Returns:
@@ -760,15 +761,24 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
     }
     
     if not company_name or not company_name.strip():
-        result['error'] = "Company name cannot be empty"
+        result['error'] = "Company name or ticker cannot be empty"
         return result
     
+    query = company_name.strip()
+    
     try:
+        # Check if input looks like a ticker (short, uppercase, alphanumeric)
+        is_likely_ticker = (
+            len(query) <= 6 and 
+            query.replace('.', '').replace('-', '').isalnum() and
+            query.isupper()
+        )
+        
         # Try FMP API first if available (most comprehensive)
         if fmp_api_key:
             try:
                 fmp_fetcher = FMPFetcher(fmp_api_key)
-                matches = fmp_fetcher.search_company(company_name)
+                matches = fmp_fetcher.search_company(query)
                 if matches:
                     result['matches'] = matches
                     result['valid'] = True
@@ -777,25 +787,47 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
             except Exception as e:
                 pass  # Fall through to other sources
         
-        # Try Yahoo Finance search
-        if yf:
+        # Try Yahoo Finance if available
+        if yf is not None:
             try:
                 yf_fetcher = YahooFinanceFetcher()
-                matches = yf_fetcher.search_company(company_name)
+                matches = yf_fetcher.search_company(query)
                 if matches:
                     result['matches'] = matches
                     result['valid'] = True
                     result['best_match'] = matches[0]
                     return result
-            except Exception:
+            except Exception as e:
+                pass  # Continue if Yahoo Finance fails
+        
+        # If it looks like a ticker and we have FMP API, try direct ticker lookup
+        if is_likely_ticker and fmp_api_key:
+            try:
+                # Direct ticker validation via FMP
+                fmp_fetcher = FMPFetcher(fmp_api_key)
+                profile_url = f"{fmp_fetcher.BASE_URL}/profile/{query}?apikey={fmp_api_key}"
+                response = requests.get(profile_url, timeout=5)
+                if response.status_code == 200 and response.json():
+                    profile = response.json()[0]
+                    result['matches'] = [{
+                        'name': profile.get('companyName', query),
+                        'ticker': query.upper()
+                    }]
+                    result['valid'] = True
+                    result['best_match'] = result['matches'][0]
+                    return result
+            except Exception as e:
                 pass
         
-        # If no matches found
+        # If no matches found, provide helpful error message
         if not result['matches']:
-            result['error'] = f"No matching companies found for '{company_name}'. Please check the spelling."
+            if is_likely_ticker:
+                result['error'] = f"Ticker '{query}' not found. Please verify the ticker symbol."
+            else:
+                result['error'] = f"No matching companies found for '{query}'. Please check the spelling or try entering a ticker symbol."
         
         return result
         
     except Exception as e:
-        result['error'] = f"Error validating company: {str(e)}"
+        result['error'] = f"Error during validation: {str(e)}"
         return result

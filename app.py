@@ -953,7 +953,7 @@ def main():
                 <div style='padding: 1rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
                             border-radius: 8px; border-left: 4px solid #f59e0b; margin: 1rem 0;'>
                     <p style='margin: 0; color: #92400e; font-size: 0.95rem;'>
-                        <strong>📋 Required:</strong> Enter company name to validate and fetch ticker symbol
+                        <strong>📋 Required:</strong> Enter company name or ticker symbol to validate
                     </p>
                 </div>
             """, unsafe_allow_html=True)
@@ -962,9 +962,9 @@ def main():
             
             with col1:
                 company_name_input = st.text_input(
-                    "🏢 Company Name (Required) *",
-                    placeholder="e.g., Reliance Industries, Apple Inc., TCS",
-                    help="Enter the full company name - we'll validate it and find the correct ticker",
+                    "🏢 Company Name or Ticker (Required) *",
+                    placeholder="e.g., Reliance Industries, Apple Inc., AAPL, TCS, MSFT",
+                    help="Enter the full company name or ticker symbol - we'll validate and find matching companies",
                     key="company_name_input"
                 )
             

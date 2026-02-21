@@ -11,7 +11,8 @@ from .data_fetcher import (
     YahooFinanceFetcher,
     FMPFetcher,
     MultiSourceFetcher,
-    DataFetcherFactory
+    DataFetcherFactory,
+    validate_company_name
 )
 
 from .analyzer import (
@@ -60,6 +61,7 @@ __all__ = [
     "FMPFetcher",
     "MultiSourceFetcher",
     "DataFetcherFactory",
+    "validate_company_name",
     
     # PDF Parsing
     "PDFReportParser",
