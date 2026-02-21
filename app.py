@@ -184,6 +184,11 @@ st.markdown("""
         border: 2px solid #e2e8f0;
     }
     
+    /* Hide the validate button in company validation form (Enter key only) */
+    [data-testid="stForm"][key="company_validation_form"] button[kind="primary"] {
+        display: none;
+    }
+    
     /* File uploader */
     .stFileUploader>div>div {
         border: 2px dashed #cbd5e1;
@@ -948,35 +953,17 @@ def main():
                 help="Enter your name for the analysis report"
             )
             
-            # Company Name Validation Section
-            st.markdown("""
-                <div style='padding: 1rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-                            border-radius: 8px; border-left: 4px solid #f59e0b; margin: 1rem 0;'>
-                    <p style='margin: 0; color: #92400e; font-size: 0.95rem;'>
-                        <strong>📋 Required:</strong> Enter company name or ticker, then press Enter or click Validate
-                    </p>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            # Use form for better Enter key handling
+            # Company Name Input with Auto-validation
+            # Use form for Enter key handling
             with st.form(key="company_validation_form", clear_on_submit=False):
-                col1, col2 = st.columns([3, 1])
-                
-                with col1:
-                    company_name_input = st.text_input(
-                        "🏢 Company Name or Ticker (Required) *",
-                        placeholder="e.g., Reliance Industries, Apple Inc., AAPL, TCS, MSFT",
-                        help="Enter the full company name or ticker symbol - we'll validate and find matching companies",
-                        key="company_name_input"
-                    )
-                
-                with col2:
-                    st.markdown("<br>", unsafe_allow_html=True)
-                    validate_btn = st.form_submit_button(
-                        "🔍 Validate",
-                        type="primary",
-                        use_container_width=True
-                    )
+                company_name_input = st.text_input(
+                    "🏢 Company Name or Ticker (Required) *",
+                    placeholder="e.g., Reliance Industries, Apple Inc., AAPL, TCS, MSFT",
+                    help="Enter company name or ticker symbol and press Enter to validate",
+                    key="company_name_input"
+                )
+                # Hidden submit button (triggered by Enter key)
+                validate_btn = st.form_submit_button("Validate", type="primary")
             
             # Initialize session state for validated company
             if 'validated_company' not in st.session_state:
@@ -984,63 +971,72 @@ def main():
             if 'company_matches' not in st.session_state:
                 st.session_state.company_matches = []
             
-            # Trigger validation when form is submitted (Enter key or button click)
+            # Auto-capitalize ticker input if it looks like a ticker
+            if company_name_input and len(company_name_input.strip()) <= 10:
+                company_name_input = company_name_input.upper()
+            
+            # Trigger validation when form is submitted (Enter key)
             if validate_btn and company_name_input and company_name_input.strip():
-                with st.spinner(f"🔍 Searching for '{company_name_input}'..."):
+                with st.spinner(f"🔍 Validating '{company_name_input}'..."):
                     deps = load_dependencies()
                     fmp_api_key = os.getenv("FMP_API_KEY")
                     validation_result = deps['validate_company_name'](company_name_input, fmp_api_key)
                     
                     if validation_result['valid'] and validation_result['matches']:
                         st.session_state.company_matches = validation_result['matches']
-                        st.session_state.validated_company = validation_result['best_match']
-                        st.success(f"✅ Found {len(validation_result['matches'])} matching compan{'y' if len(validation_result['matches']) == 1 else 'ies'}!")
+                        # Auto-select .NS for Indian stocks (prefer NSE)
+                        if len(validation_result['matches']) > 1:
+                            # Check if there's a .NS variant and auto-select it
+                            ns_match = next((m for m in validation_result['matches'] if '.NS' in m['ticker']), None)
+                            if ns_match:
+                                st.session_state.validated_company = ns_match
+                                st.session_state.company_matches = [ns_match]  # Show only .NS variant
+                            else:
+                                st.session_state.validated_company = validation_result['best_match']
+                        else:
+                            st.session_state.validated_company = validation_result['best_match']
+                        st.success(f"✅ Validated: {st.session_state.validated_company['name']}")
                     else:
                         st.session_state.company_matches = []
                         st.session_state.validated_company = None
                         st.error(validation_result.get('error', 'Company not found. Please check spelling.'))
             
-            # Display matches if available
+            # Display validated company details
             company_name = None
             ticker = None
             
-            if st.session_state.company_matches:
-                st.markdown("""
-                    <div style='padding: 0.75rem; background: #ecfdf5; border-left: 3px solid #10b981;
-                                border-radius: 6px; margin: 0.5rem 0;'>
-                        <p style='margin: 0; color: #065f46; font-size: 0.9rem;'>
-                            <strong>✓ Select the correct company:</strong>
-                        </p>
-                    </div>
-                """, unsafe_allow_html=True)
-                
-                # Create radio options with company name and ticker
-                options = [f"{match['name']} ({match['ticker']})" for match in st.session_state.company_matches]
-                selected_option = st.radio(
-                    "Matching Companies",
-                    options,
-                    index=0,
-                    key="company_selector",
-                    label_visibility="collapsed"
-                )
-                
-                # Extract selected company details
-                selected_index = options.index(selected_option)
-                selected_company = st.session_state.company_matches[selected_index]
+            if st.session_state.company_matches and st.session_state.validated_company:
+                # Auto-selected company (no radio buttons needed)
+                selected_company = st.session_state.validated_company
                 company_name = selected_company['name']
                 ticker = selected_company['ticker']
                 
-                # Display confirmation
+                # Clean up company name display - remove exchange suffixes like (NSE), (BSE)
+                display_name = company_name
+                # Remove common exchange indicators from display name
+                for suffix in [' (NSE)', ' (BSE)', ' Stock (NSE)', ' Stock (BSE)', ' Stock']:
+                    if display_name.endswith(suffix):
+                        display_name = display_name[:-len(suffix)]
+                        break
+                
+                # Display confirmation with better formatting
                 st.markdown(f"""
-                    <div style='padding: 1rem; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-                                border-radius: 8px; border-left: 4px solid #3b82f6; margin: 1rem 0;'>
-                        <p style='margin: 0 0 0.5rem 0; color: #1e40af; font-size: 0.95rem; font-weight: 600;'>
-                            📊 Selected Company Details
+                    <div style='padding: 1.2rem; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+                                border-radius: 10px; border-left: 5px solid #3b82f6; margin: 1rem 0;'>
+                        <p style='margin: 0 0 0.75rem 0; color: #1e40af; font-size: 1.05rem; font-weight: 700;'>
+                            📊 Company Details
                         </p>
-                        <p style='margin: 0; color: #1e3a8a; font-size: 0.9rem;'>
-                            <strong>Company:</strong> {company_name}<br>
-                            <strong>Ticker:</strong> {ticker}
-                        </p>
+                        <table style='width: 100%; color: #1e3a8a; font-size: 0.95rem;'>
+                            <tr>
+                                <td style='padding: 0.3rem 0; width: 25%; font-weight: 600;'>Company:</td>
+                                <td style='padding: 0.3rem 0;'>{display_name}</td>
+                            </tr>
+                            <tr>
+                                <td style='padding: 0.3rem 0; font-weight: 600;'>Ticker:</td>
+                                <td style='padding: 0.3rem 0; font-family: monospace; background: rgba(255,255,255,0.5); 
+                                    padding: 2px 8px; border-radius: 4px; display: inline-block;'>{ticker}</td>
+                            </tr>
+                        </table>
                     </div>
                 """, unsafe_allow_html=True)
             
