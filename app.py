@@ -184,11 +184,6 @@ st.markdown("""
         border: 2px solid #e2e8f0;
     }
     
-    /* Hide the validate button in company validation form (Enter key only) */
-    [data-testid="stForm"][key="company_validation_form"] button[kind="primary"] {
-        display: none;
-    }
-    
     /* File uploader */
     .stFileUploader>div>div {
         border: 2px dashed #cbd5e1;
@@ -962,8 +957,10 @@ def main():
                     help="Enter company name or ticker symbol and press Enter to validate",
                     key="company_name_input"
                 )
-                # Hidden submit button (triggered by Enter key)
-                validate_btn = st.form_submit_button("Validate", type="primary")
+                # Completely hidden submit button (triggered by Enter key only)
+                # Using markdown to hide it from view
+                st.markdown('<style>.stForm button[kind="primary"] {display: none !important;}</style>', unsafe_allow_html=True)
+                validate_btn = st.form_submit_button("Hidden Validate")
             
             # Initialize session state for validated company
             if 'validated_company' not in st.session_state:
@@ -995,7 +992,15 @@ def main():
                                 st.session_state.validated_company = validation_result['best_match']
                         else:
                             st.session_state.validated_company = validation_result['best_match']
-                        st.success(f"✅ Validated: {st.session_state.validated_company['name']}")
+                        
+                        # Clean success message display name
+                        success_name = st.session_state.validated_company['name']
+                        # Remove common suffixes for cleaner display
+                        for suffix in [' Stock (NSE)', ' Stock (BSE)', ' Stock', ' (NSE)', ' (BSE)']:
+                            if success_name.endswith(suffix):
+                                success_name = success_name[:-len(suffix)].strip()
+                                break
+                        st.success(f"✅ Validated: {success_name}")
                     else:
                         st.session_state.company_matches = []
                         st.session_state.validated_company = None
@@ -1011,13 +1016,36 @@ def main():
                 company_name = selected_company['name']
                 ticker = selected_company['ticker']
                 
-                # Clean up company name display - remove exchange suffixes like (NSE), (BSE)
+                # Clean up company name display - remove ALL suffixes and get proper name
                 display_name = company_name
-                # Remove common exchange indicators from display name
-                for suffix in [' (NSE)', ' (BSE)', ' Stock (NSE)', ' Stock (BSE)', ' Stock']:
+                # Remove common exchange indicators and ticker-based fallbacks from display name
+                suffixes_to_remove = [
+                    ' (NSE)', ' (BSE)', ' Stock (NSE)', ' Stock (BSE)', ' Stock',
+                    ' (Nasdaq)', ' (NYSE)', ' Inc.', ' Ltd.', ' Limited'
+                ]
+                for suffix in suffixes_to_remove:
                     if display_name.endswith(suffix):
-                        display_name = display_name[:-len(suffix)]
-                        break
+                        display_name = display_name[:-len(suffix)].strip()
+                
+                # If display name still looks like a ticker (all caps, short), try to get better name
+                # This happens when API returns just ticker as name
+                if len(display_name) <= 10 and display_name.isupper() and display_name.replace('.', '').isalnum():
+                    # Try to fetch better name from the ticker using API
+                    try:
+                        deps = load_dependencies()
+                        fmp_api_key = os.getenv("FMP_API_KEY")
+                        # Re-validate to get full company name
+                        validation_result = deps['validate_company_name'](display_name, fmp_api_key)
+                        if validation_result['valid'] and validation_result['best_match']:
+                            better_name = validation_result['best_match']['name']
+                            # Clean the better name too
+                            for suffix in suffixes_to_remove:
+                                if better_name.endswith(suffix):
+                                    better_name = better_name[:-len(suffix)].strip()
+                            if better_name and not (len(better_name) <= 10 and better_name.isupper()):
+                                display_name = better_name
+                    except Exception:
+                        pass  # Keep original display_name
                 
                 # Display confirmation with better formatting
                 st.markdown(f"""

@@ -404,22 +404,32 @@ class YahooFinanceFetcher(BaseDataFetcher):
                         yf_ticker = yf.Ticker(ticker_symbol)
                         info = yf_ticker.info
                     
-                    if info and 'longName' in info:
-                        company_name = info['longName']
-                        results.append({'name': company_name, 'ticker': ticker_symbol})
-                        break  # Use first successful result
+                    if info:
+                        # Try multiple name fields in order of preference
+                        company_name = None
+                        for name_field in ['longName', 'shortName', 'name']:
+                            if name_field in info and info[name_field]:
+                                company_name = info[name_field]
+                                # Skip if it's just the ticker itself
+                                if company_name.upper() != ticker_symbol.replace('.NS', '').replace('.BO', ''):
+                                    break
+                        
+                        if company_name:
+                            results.append({'name': company_name, 'ticker': ticker_symbol})
+                            break  # Use first successful result
                 except Exception:
                     continue
         except Exception:
             pass
         
-        # Fallback: if no results found, add basic result
+        # Fallback: if no results found, just use ticker
+        # Don't add " Stock" suffix as it's not a proper company name
         if not results:
-            # Check if it's a known Indian ticker - add proper suffix
+            # For Indian tickers, prefer .NS variant
             if ticker in self.INDIAN_TICKERS:
-                results.append({'name': f"{ticker} Stock (NSE)", 'ticker': f"{ticker}.NS"})
+                results.append({'name': ticker, 'ticker': f"{ticker}.NS"})
             else:
-                results.append({'name': f"{ticker} Stock", 'ticker': ticker})
+                results.append({'name': ticker, 'ticker': ticker})
         
         return results
     
