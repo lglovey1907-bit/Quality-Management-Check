@@ -735,3 +735,67 @@ class MultiSourceFetcher:
                 continue
         
         return all_results
+
+
+def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Validate company name and fetch matching ticker information
+    
+    Args:
+        company_name: Company name to validate
+        fmp_api_key: Optional FMP API key for enhanced search
+    
+    Returns:
+        Dict with:
+            - 'valid': bool indicating if company was found
+            - 'matches': List of matching companies with name and ticker
+            - 'best_match': Best matching company (if found)
+            - 'error': Error message (if any)
+    """
+    result = {
+        'valid': False,
+        'matches': [],
+        'best_match': None,
+        'error': None
+    }
+    
+    if not company_name or not company_name.strip():
+        result['error'] = "Company name cannot be empty"
+        return result
+    
+    try:
+        # Try FMP API first if available (most comprehensive)
+        if fmp_api_key:
+            try:
+                fmp_fetcher = FMPFetcher(fmp_api_key)
+                matches = fmp_fetcher.search_company(company_name)
+                if matches:
+                    result['matches'] = matches
+                    result['valid'] = True
+                    result['best_match'] = matches[0]  # First result is usually best match
+                    return result
+            except Exception as e:
+                pass  # Fall through to other sources
+        
+        # Try Yahoo Finance search
+        if yf:
+            try:
+                yf_fetcher = YahooFinanceFetcher()
+                matches = yf_fetcher.search_company(company_name)
+                if matches:
+                    result['matches'] = matches
+                    result['valid'] = True
+                    result['best_match'] = matches[0]
+                    return result
+            except Exception:
+                pass
+        
+        # If no matches found
+        if not result['matches']:
+            result['error'] = f"No matching companies found for '{company_name}'. Please check the spelling."
+        
+        return result
+        
+    except Exception as e:
+        result['error'] = f"Error validating company: {str(e)}"
+        return result

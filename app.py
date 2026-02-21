@@ -15,6 +15,7 @@ def load_dependencies():
     """Cache heavy imports to speed up subsequent loads"""
     from src import QualityManagementAgent, ReportFormatter, parse_multiple_reports, generate_institutional_pdf
     from src.pdf_compressor import compress_pdf_for_upload
+    from src.data_fetcher import validate_company_name
     import plotly.graph_objects as go
     import plotly.express as px
     return {
@@ -23,6 +24,7 @@ def load_dependencies():
         'parse_multiple_reports': parse_multiple_reports,
         'generate_institutional_pdf': generate_institutional_pdf,
         'compress_pdf_for_upload': compress_pdf_for_upload,
+        'validate_company_name': validate_company_name,
         'go': go,
         'px': px
     }
@@ -946,23 +948,110 @@ def main():
                 help="Enter your name for the analysis report"
             )
             
-            col1, col2 = st.columns(2)
+            # Company Name Validation Section
+            st.markdown("""
+                <div style='padding: 1rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+                            border-radius: 8px; border-left: 4px solid #f59e0b; margin: 1rem 0;'>
+                    <p style='margin: 0; color: #92400e; font-size: 0.95rem;'>
+                        <strong>📋 Required:</strong> Enter company name to validate and fetch ticker symbol
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            col1, col2 = st.columns([3, 1])
             
             with col1:
-                company_name = st.text_input(
-                    "🏢 Company Name",
-                    placeholder="e.g., ABC Corporation",
-                    help="Enter the full company name for analysis"
+                company_name_input = st.text_input(
+                    "🏢 Company Name (Required) *",
+                    placeholder="e.g., Reliance Industries, Apple Inc., TCS",
+                    help="Enter the full company name - we'll validate it and find the correct ticker",
+                    key="company_name_input"
                 )
             
             with col2:
-                years_to_analyze = st.number_input(
-                    "📅 Years to Analyze",
-                    min_value=1,
-                    max_value=10,
-                    value=5,
-                    help="Number of years of historical data to analyze"
+                st.markdown("<br>", unsafe_allow_html=True)
+                validate_btn = st.button(
+                    "🔍 Validate",
+                    type="primary",
+                    use_container_width=True,
+                    disabled=not company_name_input or not company_name_input.strip()
                 )
+            
+            # Initialize session state for validated company
+            if 'validated_company' not in st.session_state:
+                st.session_state.validated_company = None
+            if 'company_matches' not in st.session_state:
+                st.session_state.company_matches = []
+            
+            # Handle validation
+            if validate_btn and company_name_input:
+                with st.spinner(f"🔍 Searching for '{company_name_input}'..."):
+                    deps = load_dependencies()
+                    fmp_api_key = os.getenv("FMP_API_KEY")
+                    validation_result = deps['validate_company_name'](company_name_input, fmp_api_key)
+                    
+                    if validation_result['valid'] and validation_result['matches']:
+                        st.session_state.company_matches = validation_result['matches']
+                        st.session_state.validated_company = validation_result['best_match']
+                        st.success(f"✅ Found {len(validation_result['matches'])} matching compan{'y' if len(validation_result['matches']) == 1 else 'ies'}!")
+                    else:
+                        st.session_state.company_matches = []
+                        st.session_state.validated_company = None
+                        st.error(validation_result.get('error', 'Company not found. Please check spelling.'))
+            
+            # Display matches if available
+            company_name = None
+            ticker = None
+            
+            if st.session_state.company_matches:
+                st.markdown("""
+                    <div style='padding: 0.75rem; background: #ecfdf5; border-left: 3px solid #10b981;
+                                border-radius: 6px; margin: 0.5rem 0;'>
+                        <p style='margin: 0; color: #065f46; font-size: 0.9rem;'>
+                            <strong>✓ Select the correct company:</strong>
+                        </p>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                # Create radio options with company name and ticker
+                options = [f"{match['name']} ({match['ticker']})" for match in st.session_state.company_matches]
+                selected_option = st.radio(
+                    "Matching Companies",
+                    options,
+                    index=0,
+                    key="company_selector",
+                    label_visibility="collapsed"
+                )
+                
+                # Extract selected company details
+                selected_index = options.index(selected_option)
+                selected_company = st.session_state.company_matches[selected_index]
+                company_name = selected_company['name']
+                ticker = selected_company['ticker']
+                
+                # Display confirmation
+                st.markdown(f"""
+                    <div style='padding: 1rem; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+                                border-radius: 8px; border-left: 4px solid #3b82f6; margin: 1rem 0;'>
+                        <p style='margin: 0 0 0.5rem 0; color: #1e40af; font-size: 0.95rem; font-weight: 600;'>
+                            📊 Selected Company Details
+                        </p>
+                        <p style='margin: 0; color: #1e3a8a; font-size: 0.9rem;'>
+                            <strong>Company:</strong> {company_name}<br>
+                            <strong>Ticker:</strong> {ticker}
+                        </p>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            # Years to analyze
+            st.markdown("<br>", unsafe_allow_html=True)
+            years_to_analyze = st.number_input(
+                "📅 Years to Analyze",
+                min_value=1,
+                max_value=10,
+                value=5,
+                help="Number of years of historical data to analyze"
+            )
             
             uploaded_files = None
             
@@ -1092,11 +1181,19 @@ def main():
             
             # Analyze button with icon
             st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("🚀 Start Analysis", type="primary", use_container_width=True):
+            
+            # Check if company is validated before enabling analysis
+            can_analyze = bool(company_name and uploaded_files)
+            
+            # Show helpful message if company not validated
+            if not company_name and company_name_input:
+                st.info("ℹ️ Click **Validate** to verify company name before analysis")
+            
+            if st.button("🚀 Start Analysis", type="primary", use_container_width=True, disabled=not can_analyze):
                 if not user_name:
                     st.error("⚠️ **Missing Information:** Please enter your name")
                 elif not company_name:
-                    st.error("⚠️ **Missing Information:** Please enter a company name")
+                    st.error("⚠️ **Missing Information:** Please validate company name first")
                 elif not uploaded_files:
                     st.error("⚠️ **No Files:** Please upload at least one PDF file")
                 else:
@@ -1355,7 +1452,15 @@ def main():
                         
                         # Generate PDF in temporary file
                         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        pdf_filename = f"Quality_Report_{report.ticker}_{timestamp}.pdf"
+                        
+                        # Use company name for filename, sanitize it
+                        if report.company_name and report.company_name.strip():
+                            clean_name = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in report.company_name)
+                            clean_name = clean_name.replace(' ', '_').strip('_')[:50]
+                        else:
+                            clean_name = report.ticker if report.ticker else "Company"
+                        
+                        pdf_filename = f"Quality_Report_{clean_name}_{timestamp}.pdf"
                         
                         # Create temp directory if needed
                         temp_dir = tempfile.gettempdir()

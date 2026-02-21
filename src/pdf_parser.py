@@ -139,10 +139,19 @@ Return ONLY valid JSON, no additional text.
             
             data_dict = json.loads(json_text)
             
+            # Get AI-extracted company name, but prioritize user input if provided
+            extracted_name = data_dict.get("company_name", "")
+            # If AI returned placeholder or empty, or user provided specific name, use user input
+            if not extracted_name or extracted_name.lower() in ["(anonymous)", "anonymous", "n/a", "unknown"]:
+                final_company_name = company_name if company_name else extracted_name
+            else:
+                # Use AI extracted name if it looks valid and user didn't provide specific input
+                final_company_name = company_name if company_name and company_name.strip() else extracted_name
+            
             # Convert to FinancialData object
             fin_data = FinancialData(
-                company_name=data_dict.get("company_name", company_name),
-                ticker=company_name.upper().replace(" ", "_"),
+                company_name=final_company_name,
+                ticker=final_company_name.upper().replace(" ", "_") if final_company_name else "UNKNOWN",
                 years_analyzed=years_to_analyze,
                 data_source="PDF Annual Report",
                 fetch_timestamp=datetime.now().isoformat()
