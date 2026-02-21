@@ -400,38 +400,43 @@ class YahooFinanceFetcher(BaseDataFetcher):
             candidates = self._resolve_ticker(ticker)
             for ticker_symbol in candidates:
                 try:
+                    # Try with suppress_output first
                     with suppress_output():
                         yf_ticker = yf.Ticker(ticker_symbol)
                         info = yf_ticker.info
                     
-                    if info:
+                    # If info is empty or very small, try without suppression
+                    if not info or len(info) < 5:
+                        yf_ticker = yf.Ticker(ticker_symbol)
+                        info = yf_ticker.info
+                    
+                    if info and len(info) > 5:  # Valid info dict should have many fields
                         # Try multiple name fields in order of preference
                         company_name = None
-                        for name_field in ['longName', 'shortName', 'name']:
+                        for name_field in ['longName', 'shortName', 'name', 'quoteType']:
                             if name_field in info and info[name_field]:
-                                company_name = info[name_field]
+                                potential_name = str(info[name_field])
                                 # Skip if it's just the ticker itself (without exchange suffix)
                                 base_ticker = ticker_symbol.replace('.NS', '').replace('.BO', '').replace('.', '')
-                                if company_name.upper() != base_ticker and company_name.upper() != ticker:
+                                if (potential_name.upper() != base_ticker and 
+                                    potential_name.upper() != ticker and
+                                    potential_name.upper() not in ['EQUITY', 'MUTUALFUND', 'ETF']):
+                                    company_name = potential_name
                                     break
                         
-                        if company_name and company_name.upper() not in [ticker, ticker_symbol]:
+                        if company_name and company_name.upper() not in [ticker, ticker_symbol, base_ticker]:
                             results.append({'name': company_name, 'ticker': ticker_symbol})
                             break  # Use first successful result with proper name
-                except Exception:
+                except Exception as e:
+                    # Continue trying other candidates
                     continue
-        except Exception:
+        except Exception as e:
+            # If all attempts fail, results will be empty
             pass
         
-        # Fallback: if no results found, just use ticker
-        # Don't add " Stock" suffix as it's not a proper company name
-        if not results:
-            # For Indian tickers, prefer .NS variant but don't add fake company name
-            if ticker in self.INDIAN_TICKERS:
-                results.append({'name': ticker, 'ticker': f"{ticker}.NS"})
-            else:
-                results.append({'name': ticker, 'ticker': ticker})
-        
+        # Don't add fallback with ticker as company name
+        # Return empty results if we couldn't fetch a real company name
+        # This allows the validation to try other APIs or fail gracefully
         return results
     
     def fetch_data(self, company_identifier: str, years: int) -> Optional[FinancialData]:
@@ -877,6 +882,68 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
                             return result
                 except Exception as e:
                     pass
+        
+        # Final fallback: Manual lookup for major Indian stocks
+        if not result['matches'] and is_likely_ticker:
+            # Hardcoded mapping for major Indian stocks (when APIs fail)
+            INDIAN_STOCK_NAMES = {
+                'RELIANCE': 'Reliance Industries Limited',
+                'TCS': 'Tata Consultancy Services Limited',
+                'INFY': 'Infosys Limited',
+                'HDFCBANK': 'HDFC Bank Limited',
+                'ICICIBANK': 'ICICI Bank Limited',
+                'HINDUNILVR': 'Hindustan Unilever Limited',
+                'SBIN': 'State Bank of India',
+                'BHARTIARTL': 'Bharti Airtel Limited',
+                'ITC': 'ITC Limited',
+                'KOTAKBANK': 'Kotak Mahindra Bank Limited',
+                'LT': 'Larsen & Toubro Limited',
+                'AXISBANK': 'Axis Bank Limited',
+                'WIPRO': 'Wipro Limited',
+                'ASIANPAINT': 'Asian Paints Limited',
+                'MARUTI': 'Maruti Suzuki India Limited',
+                'HCLTECH': 'HCL Technologies Limited',
+                'SUNPHARMA': 'Sun Pharmaceutical Industries Limited',
+                'TITAN': 'Titan Company Limited',
+                'ULTRACEMCO': 'UltraTech Cement Limited',
+                'BAJFINANCE': 'Bajaj Finance Limited',
+                'NESTLEIND': 'Nestle India Limited',
+                'TECHM': 'Tech Mahindra Limited',
+                'POWERGRID': 'Power Grid Corporation of India Limited',
+                'NTPC': 'NTPC Limited',
+                'TATAMOTORS': 'Tata Motors Limited',
+                'TATASTEEL': 'Tata Steel Limited',
+                'JSWSTEEL': 'JSW Steel Limited',
+                'ONGC': 'Oil and Natural Gas Corporation Limited',
+                'COALINDIA': 'Coal India Limited',
+                'ADANIENT': 'Adani Enterprises Limited',
+                'ADANIPORTS': 'Adani Ports and Special Economic Zone Limited',
+                'BAJAJFINSV': 'Bajaj Finserv Limited',
+                'DRREDDY': 'Dr. Reddy\'s Laboratories Limited',
+                'CIPLA': 'Cipla Limited',
+                'EICHERMOT': 'Eicher Motors Limited',
+                'GRASIM': 'Grasim Industries Limited',
+                'DIVISLAB': 'Divi\'s Laboratories Limited',
+                'BRITANNIA': 'Britannia Industries Limited',
+                'APOLLOHOSP': 'Apollo Hospitals Enterprise Limited',
+                'INDUSINDBK': 'IndusInd Bank Limited',
+                'M&M': 'Mahindra & Mahindra Limited',
+                'BPCL': 'Bharat Petroleum Corporation Limited',
+                'HEROMOTOCO': 'Hero MotoCorp Limited',
+                'HINDALCO': 'Hindalco Industries Limited',
+                'TATACONSUM': 'Tata Consumer Products Limited',
+                'BAJAJ-AUTO': 'Bajaj Auto Limited',
+                'UPL': 'UPL Limited'
+            }
+            
+            base_query = query.replace('.NS', '').replace('.BO', '')
+            if base_query in INDIAN_STOCK_NAMES:
+                company_name = INDIAN_STOCK_NAMES[base_query]
+                ticker_symbol = f"{base_query}.NS" if '.NS' not in query and '.BO' not in query else query
+                result['matches'] = [{'name': company_name, 'ticker': ticker_symbol}]
+                result['valid'] = True
+                result['best_match'] = result['matches'][0]
+                return result
         
         # If no matches found, provide helpful error message
         if not result['matches']:

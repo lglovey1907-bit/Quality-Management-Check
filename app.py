@@ -957,10 +957,23 @@ def main():
                     help="Enter company name or ticker symbol and press Enter to validate",
                     key="company_name_input"
                 )
-                # Completely hidden submit button (triggered by Enter key only)
-                # Using markdown to hide it from view
-                st.markdown('<style>.stForm button[kind="primary"] {display: none !important;}</style>', unsafe_allow_html=True)
-                validate_btn = st.form_submit_button("Hidden Validate")
+                # Completely hide the submit button - multiple CSS selectors for compatibility
+                st.markdown('''
+                <style>
+                .stForm button[kind="primary"],
+                .stForm button[type="submit"],
+                .stForm [data-testid="stFormSubmitButton"],
+                div[data-testid="stForm"] button {
+                    display: none !important;
+                    visibility: hidden !important;
+                    height: 0 !important;
+                    width: 0 !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                }
+                </style>
+                ''', unsafe_allow_html=True)
+                validate_btn = st.form_submit_button(label="", help="Press Enter to validate")
             
             # Initialize session state for validated company
             if 'validated_company' not in st.session_state:
