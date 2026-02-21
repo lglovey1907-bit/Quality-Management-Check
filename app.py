@@ -953,29 +953,30 @@ def main():
                 <div style='padding: 1rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
                             border-radius: 8px; border-left: 4px solid #f59e0b; margin: 1rem 0;'>
                     <p style='margin: 0; color: #92400e; font-size: 0.95rem;'>
-                        <strong>📋 Required:</strong> Enter company name or ticker symbol to validate
+                        <strong>📋 Required:</strong> Enter company name or ticker, then press Enter or click Validate
                     </p>
                 </div>
             """, unsafe_allow_html=True)
             
-            col1, col2 = st.columns([3, 1])
-            
-            with col1:
-                company_name_input = st.text_input(
-                    "🏢 Company Name or Ticker (Required) *",
-                    placeholder="e.g., Reliance Industries, Apple Inc., AAPL, TCS, MSFT",
-                    help="Enter the full company name or ticker symbol - we'll validate and find matching companies",
-                    key="company_name_input"
-                )
-            
-            with col2:
-                st.markdown("<br>", unsafe_allow_html=True)
-                validate_btn = st.button(
-                    "🔍 Validate",
-                    type="primary",
-                    use_container_width=True,
-                    disabled=not company_name_input or not company_name_input.strip()
-                )
+            # Use form for better Enter key handling
+            with st.form(key="company_validation_form", clear_on_submit=False):
+                col1, col2 = st.columns([3, 1])
+                
+                with col1:
+                    company_name_input = st.text_input(
+                        "🏢 Company Name or Ticker (Required) *",
+                        placeholder="e.g., Reliance Industries, Apple Inc., AAPL, TCS, MSFT",
+                        help="Enter the full company name or ticker symbol - we'll validate and find matching companies",
+                        key="company_name_input"
+                    )
+                
+                with col2:
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    validate_btn = st.form_submit_button(
+                        "🔍 Validate",
+                        type="primary",
+                        use_container_width=True
+                    )
             
             # Initialize session state for validated company
             if 'validated_company' not in st.session_state:
@@ -983,8 +984,8 @@ def main():
             if 'company_matches' not in st.session_state:
                 st.session_state.company_matches = []
             
-            # Handle validation
-            if validate_btn and company_name_input:
+            # Trigger validation when form is submitted (Enter key or button click)
+            if validate_btn and company_name_input and company_name_input.strip():
                 with st.spinner(f"🔍 Searching for '{company_name_input}'..."):
                     deps = load_dependencies()
                     fmp_api_key = os.getenv("FMP_API_KEY")

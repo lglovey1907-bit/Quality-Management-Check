@@ -391,13 +391,35 @@ class YahooFinanceFetcher(BaseDataFetcher):
         return candidates
     
     def search_company(self, query: str) -> List[Dict[str, str]]:
-        """Search for companies (basic implementation)"""
+        """Search for companies using Yahoo Finance data"""
         ticker = query.upper().strip()
-        results = [{'name': query, 'ticker': ticker}]
+        results = []
         
-        # Add Indian variants
-        if ticker in self.INDIAN_TICKERS:
-            results.insert(0, {'name': f"{query} (NSE)", 'ticker': f"{ticker}.NS"})
+        # Try to get actual company name from Yahoo Finance
+        try:
+            candidates = self._resolve_ticker(ticker)
+            for ticker_symbol in candidates:
+                try:
+                    with suppress_output():
+                        yf_ticker = yf.Ticker(ticker_symbol)
+                        info = yf_ticker.info
+                    
+                    if info and 'longName' in info:
+                        company_name = info['longName']
+                        results.append({'name': company_name, 'ticker': ticker_symbol})
+                        break  # Use first successful result
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        
+        # Fallback: if no results found, add basic result
+        if not results:
+            # Check if it's a known Indian ticker - add proper suffix
+            if ticker in self.INDIAN_TICKERS:
+                results.append({'name': f"{ticker} Stock (NSE)", 'ticker': f"{ticker}.NS"})
+            else:
+                results.append({'name': f"{ticker} Stock", 'ticker': ticker})
         
         return results
     
