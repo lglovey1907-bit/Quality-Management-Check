@@ -13,6 +13,12 @@ from datetime import datetime
 @st.cache_resource
 def load_dependencies():
     """Cache heavy imports to speed up subsequent loads"""
+    # Force reload of data_fetcher module to get latest changes
+    import sys
+    if 'src.data_fetcher' in sys.modules:
+        import importlib
+        importlib.reload(sys.modules['src.data_fetcher'])
+    
     from src import QualityManagementAgent, ReportFormatter, parse_multiple_reports, generate_institutional_pdf
     from src.pdf_compressor import compress_pdf_for_upload
     from src.data_fetcher import validate_company_name
@@ -941,6 +947,15 @@ def main():
                 </div>
             """, unsafe_allow_html=True)
             
+            # Cache clear button for debugging
+            col1, col2 = st.columns([3, 1])
+            with col2:
+                if st.button("🔄 Clear Cache", help="Clear app cache and reload validation logic"):
+                    st.cache_data.clear()
+                    st.session_state.clear()
+                    st.success("✅ Cache cleared! Page will reload...")
+                    st.rerun()
+            
             # User name input
             user_name = st.text_input(
                 "👤 Your Name",
@@ -991,6 +1006,11 @@ def main():
                     deps = load_dependencies()
                     fmp_api_key = os.getenv("FMP_API_KEY")
                     validation_result = deps['validate_company_name'](company_name_input, fmp_api_key)
+                    
+                    # DEBUG: Show what we got (temporary)
+                    if validation_result['valid'] and validation_result['best_match']:
+                        debug_info = f"DEBUG - Returned: {validation_result['best_match']['name']} ({validation_result['best_match']['ticker']})"
+                        st.caption(debug_info)
                     
                     if validation_result['valid'] and validation_result['matches']:
                         st.session_state.company_matches = validation_result['matches']
