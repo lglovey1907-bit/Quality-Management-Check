@@ -812,19 +812,70 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
             query.isupper()
         )
         
-        # Indian stock tickers that need .NS suffix
-        INDIAN_TICKERS = {
-            'TCS', 'RELIANCE', 'INFY', 'HDFCBANK', 'ICICIBANK', 'HINDUNILVR',
-            'SBIN', 'BHARTIARTL', 'ITC', 'KOTAKBANK', 'LT', 'AXISBANK',
-            'WIPRO', 'ASIANPAINT', 'MARUTI', 'HCLTECH', 'SUNPHARMA', 'TITAN',
-            'ULTRACEMCO', 'BAJFINANCE', 'NESTLEIND', 'TECHM', 'POWERGRID',
-            'NTPC', 'TATAMOTORS', 'TATASTEEL', 'JSWSTEEL', 'ONGC', 'COALINDIA',
-            'ADANIENT', 'ADANIPORTS', 'BAJAJFINSV', 'DRREDDY', 'CIPLA', 'EICHERMOT',
-            'GRASIM', 'DIVISLAB', 'BRITANNIA', 'APOLLOHOSP', 'INDUSINDBK', 'M&M',
-            'BPCL', 'HEROMOTOCO', 'HINDALCO', 'TATACONSUM', 'BAJAJ-AUTO', 'UPL'
+        # Hardcoded mapping for major Indian stocks (use FIRST to avoid API issues)
+        INDIAN_STOCK_NAMES = {
+            'RELIANCE': 'Reliance Industries Limited',
+            'TCS': 'Tata Consultancy Services Limited',
+            'INFY': 'Infosys Limited',
+            'HDFCBANK': 'HDFC Bank Limited',
+            'ICICIBANK': 'ICICI Bank Limited',
+            'HINDUNILVR': 'Hindustan Unilever Limited',
+            'SBIN': 'State Bank of India',
+            'BHARTIARTL': 'Bharti Airtel Limited',
+            'ITC': 'ITC Limited',
+            'KOTAKBANK': 'Kotak Mahindra Bank Limited',
+            'LT': 'Larsen & Toubro Limited',
+            'AXISBANK': 'Axis Bank Limited',
+            'WIPRO': 'Wipro Limited',
+            'ASIANPAINT': 'Asian Paints Limited',
+            'MARUTI': 'Maruti Suzuki India Limited',
+            'HCLTECH': 'HCL Technologies Limited',
+            'SUNPHARMA': 'Sun Pharmaceutical Industries Limited',
+            'TITAN': 'Titan Company Limited',
+            'ULTRACEMCO': 'UltraTech Cement Limited',
+            'BAJFINANCE': 'Bajaj Finance Limited',
+            'NESTLEIND': 'Nestle India Limited',
+            'TECHM': 'Tech Mahindra Limited',
+            'POWERGRID': 'Power Grid Corporation of India Limited',
+            'NTPC': 'NTPC Limited',
+            'TATAMOTORS': 'Tata Motors Limited',
+            'TATASTEEL': 'Tata Steel Limited',
+            'JSWSTEEL': 'JSW Steel Limited',
+            'ONGC': 'Oil and Natural Gas Corporation Limited',
+            'COALINDIA': 'Coal India Limited',
+            'ADANIENT': 'Adani Enterprises Limited',
+            'ADANIPORTS': 'Adani Ports and Special Economic Zone Limited',
+            'BAJAJFINSV': 'Bajaj Finserv Limited',
+            'DRREDDY': 'Dr. Reddy\'s Laboratories Limited',
+            'CIPLA': 'Cipla Limited',
+            'EICHERMOT': 'Eicher Motors Limited',
+            'GRASIM': 'Grasim Industries Limited',
+            'DIVISLAB': 'Divi\'s Laboratories Limited',
+            'BRITANNIA': 'Britannia Industries Limited',
+            'APOLLOHOSP': 'Apollo Hospitals Enterprise Limited',
+            'INDUSINDBK': 'IndusInd Bank Limited',
+            'M&M': 'Mahindra & Mahindra Limited',
+            'BPCL': 'Bharat Petroleum Corporation Limited',
+            'HEROMOTOCO': 'Hero MotoCorp Limited',
+            'HINDALCO': 'Hindalco Industries Limited',
+            'TATACONSUM': 'Tata Consumer Products Limited',
+            'BAJAJ-AUTO': 'Bajaj Auto Limited',
+            'UPL': 'UPL Limited'
         }
         
+        # PRIORITY: Check hardcoded mapping FIRST for known Indian stocks
+        if is_likely_ticker:
+            base_query = query.replace('.NS', '').replace('.BO', '')
+            if base_query in INDIAN_STOCK_NAMES:
+                company_name = INDIAN_STOCK_NAMES[base_query]
+                ticker_symbol = f"{base_query}.NS" if '.NS' not in query and '.BO' not in query else query
+                result['matches'] = [{'name': company_name, 'ticker': ticker_symbol}]
+                result['valid'] = True
+                result['best_match'] = result['matches'][0]
+                return result
+        
         # For known Indian tickers, add .NS suffix for better API lookups
+        INDIAN_TICKERS = set(INDIAN_STOCK_NAMES.keys())
         query_variants = [query]
         if is_likely_ticker:
             base_query = query.replace('.NS', '').replace('.BO', '')
@@ -882,68 +933,6 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
                             return result
                 except Exception as e:
                     pass
-        
-        # Final fallback: Manual lookup for major Indian stocks
-        if not result['matches'] and is_likely_ticker:
-            # Hardcoded mapping for major Indian stocks (when APIs fail)
-            INDIAN_STOCK_NAMES = {
-                'RELIANCE': 'Reliance Industries Limited',
-                'TCS': 'Tata Consultancy Services Limited',
-                'INFY': 'Infosys Limited',
-                'HDFCBANK': 'HDFC Bank Limited',
-                'ICICIBANK': 'ICICI Bank Limited',
-                'HINDUNILVR': 'Hindustan Unilever Limited',
-                'SBIN': 'State Bank of India',
-                'BHARTIARTL': 'Bharti Airtel Limited',
-                'ITC': 'ITC Limited',
-                'KOTAKBANK': 'Kotak Mahindra Bank Limited',
-                'LT': 'Larsen & Toubro Limited',
-                'AXISBANK': 'Axis Bank Limited',
-                'WIPRO': 'Wipro Limited',
-                'ASIANPAINT': 'Asian Paints Limited',
-                'MARUTI': 'Maruti Suzuki India Limited',
-                'HCLTECH': 'HCL Technologies Limited',
-                'SUNPHARMA': 'Sun Pharmaceutical Industries Limited',
-                'TITAN': 'Titan Company Limited',
-                'ULTRACEMCO': 'UltraTech Cement Limited',
-                'BAJFINANCE': 'Bajaj Finance Limited',
-                'NESTLEIND': 'Nestle India Limited',
-                'TECHM': 'Tech Mahindra Limited',
-                'POWERGRID': 'Power Grid Corporation of India Limited',
-                'NTPC': 'NTPC Limited',
-                'TATAMOTORS': 'Tata Motors Limited',
-                'TATASTEEL': 'Tata Steel Limited',
-                'JSWSTEEL': 'JSW Steel Limited',
-                'ONGC': 'Oil and Natural Gas Corporation Limited',
-                'COALINDIA': 'Coal India Limited',
-                'ADANIENT': 'Adani Enterprises Limited',
-                'ADANIPORTS': 'Adani Ports and Special Economic Zone Limited',
-                'BAJAJFINSV': 'Bajaj Finserv Limited',
-                'DRREDDY': 'Dr. Reddy\'s Laboratories Limited',
-                'CIPLA': 'Cipla Limited',
-                'EICHERMOT': 'Eicher Motors Limited',
-                'GRASIM': 'Grasim Industries Limited',
-                'DIVISLAB': 'Divi\'s Laboratories Limited',
-                'BRITANNIA': 'Britannia Industries Limited',
-                'APOLLOHOSP': 'Apollo Hospitals Enterprise Limited',
-                'INDUSINDBK': 'IndusInd Bank Limited',
-                'M&M': 'Mahindra & Mahindra Limited',
-                'BPCL': 'Bharat Petroleum Corporation Limited',
-                'HEROMOTOCO': 'Hero MotoCorp Limited',
-                'HINDALCO': 'Hindalco Industries Limited',
-                'TATACONSUM': 'Tata Consumer Products Limited',
-                'BAJAJ-AUTO': 'Bajaj Auto Limited',
-                'UPL': 'UPL Limited'
-            }
-            
-            base_query = query.replace('.NS', '').replace('.BO', '')
-            if base_query in INDIAN_STOCK_NAMES:
-                company_name = INDIAN_STOCK_NAMES[base_query]
-                ticker_symbol = f"{base_query}.NS" if '.NS' not in query and '.BO' not in query else query
-                result['matches'] = [{'name': company_name, 'ticker': ticker_symbol}]
-                result['valid'] = True
-                result['best_match'] = result['matches'][0]
-                return result
         
         # If no matches found, provide helpful error message
         if not result['matches']:
