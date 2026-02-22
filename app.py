@@ -1029,12 +1029,13 @@ def main():
                 company_name = selected_company['name']
                 ticker = selected_company['ticker']
                 
-                # Clean up company name display - remove ALL suffixes and get proper name
+                # Clean up company name display - remove exchange indicators but keep Limited for Indian companies
                 display_name = company_name
                 # Remove common exchange indicators and ticker-based fallbacks from display name
+                # Don't remove "Limited" as it's part of official Indian company names
                 suffixes_to_remove = [
                     ' (NSE)', ' (BSE)', ' Stock (NSE)', ' Stock (BSE)', ' Stock',
-                    ' (Nasdaq)', ' (NYSE)', ' Inc.', ' Ltd.', ' Limited'
+                    ' (Nasdaq)', ' (NYSE)', ' Inc.', ' Ltd.'
                 ]
                 for suffix in suffixes_to_remove:
                     if display_name.endswith(suffix):
