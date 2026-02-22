@@ -1192,6 +1192,19 @@ def main():
                         st.success(f"✅ **{uploaded_file.name}** `{format_size(file_size_mb)}` — Ready for analysis!")
                         uploaded_files = [uploaded_file]
             else:
+                # Show required number of PDFs
+                st.markdown(f"""
+                    <div style='padding: 1rem; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+                                border-radius: 8px; border-left: 4px solid #3b82f6; margin: 1rem 0;'>
+                        <p style='margin: 0 0 0.5rem 0; color: #1e40af; font-size: 0.95rem; font-weight: 600;'>
+                            📋 Required: Upload exactly {years_to_analyze} PDF files
+                        </p>
+                        <p style='margin: 0; color: #1e3a8a; font-size: 0.85rem;'>
+                            One PDF file per year of financial data (Total: {years_to_analyze} years)
+                        </p>
+                    </div>
+                """, unsafe_allow_html=True)
+                
                 st.markdown("""
                     <div style='padding: 0.75rem; background: #fff7ed; border-left: 3px solid #f59e0b;
                                 border-radius: 6px; margin: 1rem 0;'>
@@ -1203,11 +1216,11 @@ def main():
                 """, unsafe_allow_html=True)
                 
                 uploaded_files_raw = st.file_uploader(
-                    "📂 Upload Multiple Annual Reports (PDFs)",
+                    f"📂 Upload {years_to_analyze} Annual Reports (PDFs)",
                     type=['pdf'],
                     accept_multiple_files=True,
                     key="multi_pdf_uploader",
-                    help="Select multiple PDF files (one per year)"
+                    help=f"Select exactly {years_to_analyze} PDF files (one per year)"
                 )
                 if uploaded_files_raw:
                     # Check individual file sizes
@@ -1224,12 +1237,19 @@ def main():
                             valid_files.append(f)
                             total_size_mb += file_size_mb
                     
-                    if valid_files:
+                    # Validate file count matches years_to_analyze
+                    if len(valid_files) != years_to_analyze:
+                        if len(valid_files) < years_to_analyze:
+                            st.error(f"❌ **Insufficient Files:** You uploaded {len(valid_files)} file(s), but {years_to_analyze} are required. Please upload {years_to_analyze - len(valid_files)} more file(s).")
+                        else:
+                            st.error(f"❌ **Too Many Files:** You uploaded {len(valid_files)} file(s), but only {years_to_analyze} are required. Please select exactly {years_to_analyze} file(s).")
+                        uploaded_files = None
+                    elif valid_files:
                         st.markdown(f"""
                             <div style='padding: 1rem; background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
                                         border-radius: 8px; text-align: center; margin: 1rem 0;'>
                                 <p style='margin: 0; color: #065f46; font-weight: 600;'>
-                                    📦 Total: {format_size(total_size_mb)} | {len(valid_files)} files ready for analysis
+                                    ✅ Perfect! {len(valid_files)} files uploaded (Total: {format_size(total_size_mb)})
                                 </p>
                             </div>
                         """, unsafe_allow_html=True)
@@ -1254,7 +1274,12 @@ def main():
                 elif not company_name:
                     st.error("⚠️ **Missing Information:** Please validate company name first")
                 elif not uploaded_files:
-                    st.error("⚠️ **No Files:** Please upload at least one PDF file")
+                    if "Multiple PDFs" in upload_mode:
+                        st.error(f"⚠️ **Missing Files:** Please upload exactly {years_to_analyze} PDF files (one per year)")
+                    else:
+                        st.error("⚠️ **No Files:** Please upload at least one PDF file")
+                elif "Multiple PDFs" in upload_mode and len(uploaded_files) != years_to_analyze:
+                    st.error(f"⚠️ **Incorrect File Count:** You uploaded {len(uploaded_files)} file(s), but {years_to_analyze} are required")
                 else:
                     # Determine PDF paths based on selection method
                     temp_dir = None
