@@ -813,11 +813,13 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
         )
         
         # Hardcoded mapping for major Indian stocks (use FIRST to avoid API issues)
+        # Comprehensive list of NSE stocks - 150+ companies
         INDIAN_STOCK_NAMES = {
+            # Nifty 50 - Large Caps
             'RELIANCE': 'Reliance Industries Limited',
             'TCS': 'Tata Consultancy Services Limited',
-            'INFY': 'Infosys Limited',
             'HDFCBANK': 'HDFC Bank Limited',
+            'INFY': 'Infosys Limited',
             'ICICIBANK': 'ICICI Bank Limited',
             'HINDUNILVR': 'Hindustan Unilever Limited',
             'SBIN': 'State Bank of India',
@@ -860,7 +862,119 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
             'HINDALCO': 'Hindalco Industries Limited',
             'TATACONSUM': 'Tata Consumer Products Limited',
             'BAJAJ-AUTO': 'Bajaj Auto Limited',
-            'UPL': 'UPL Limited'
+            'UPL': 'UPL Limited',
+            
+            # Nifty Next 50 & Popular Mid/Small Caps
+            'VEDL': 'Vedanta Limited',
+            'GODREJCP': 'Godrej Consumer Products Limited',
+            'DABUR': 'Dabur India Limited',
+            'MARICO': 'Marico Limited',
+            'PIIND': 'PI Industries Limited',
+            'BANKBARODA': 'Bank of Baroda',
+            'PNB': 'Punjab National Bank',
+            'CANBK': 'Canara Bank',
+            'UNIONBANK': 'Union Bank of India',
+            'INDHOTEL': 'The Indian Hotels Company Limited',
+            'TRENT': 'Trent Limited',
+            'PIDILITIND': 'Pidilite Industries Limited',
+            'AMBUJACEM': 'Ambuja Cements Limited',
+            'ACC': 'ACC Limited',
+            'SHREECEM': 'Shree Cement Limited',
+            'GAIL': 'GAIL (India) Limited',
+            'IOC': 'Indian Oil Corporation Limited',
+            'HINDZINC': 'Hindustan Zinc Limited',
+            'HINDALCO': 'Hindalco Industries Limited',
+            'SAIL': 'Steel Authority of India Limited',
+            'NMDC': 'NMDC Limited',
+            'ADANIGREEN': 'Adani Green Energy Limited',
+            'ADANIPOWER': 'Adani Power Limited',
+            'ADANITRANS': 'Adani Transmission Limited',
+            'TATAPOWER': 'Tata Power Company Limited',
+            'TORNTPOWER': 'Torrent Power Limited',
+            'SIEMENS': 'Siemens Limited',
+            'ABB': 'ABB India Limited',
+            'HAVELLS': 'Havells India Limited',
+            'CROMPTON': 'Crompton Greaves Consumer Electricals Limited',
+            'VOLTAS': 'Voltas Limited',
+            'BLUESTARCO': 'Blue Star Limited',
+            'GODREJPROP': 'Godrej Properties Limited',
+            'DLF': 'DLF Limited',
+            'OBEROIRLTY': 'Oberoi Realty Limited',
+            'PRESTIGE': 'Prestige Estates Projects Limited',
+            'PHOENIXLTD': 'The Phoenix Mills Limited',
+            'INDIGOPNTS': 'Indigo Paints Limited',
+            'BERGEPAINT': 'Berger Paints India Limited',
+            'AKZOINDIA': 'Akzo Nobel India Limited',
+            'MCDOWELL-N': 'United Spirits Limited',
+            'RADICO': 'Radico Khaitan Limited',
+            'UNITDSPR': 'United Spirits Limited',
+            'VBL': 'Varun Beverages Limited',
+            'TATACOMM': 'Tata Communications Limited',
+            'TVSMOTOR': 'TVS Motor Company Limited',
+            'BAJAJHLDNG': 'Bajaj Holdings & Investment Limited',
+            'BOSCHLTD': 'Bosch Limited',
+            'MOTHERSON': 'Samvardhana Motherson International Limited',
+            'ESCORTS': 'Escorts Kubota Limited',
+            'ASHOKLEY': 'Ashok Leyland Limited',
+            'APOLLOTYRE': 'Apollo Tyres Limited',
+            'MRF': 'MRF Limited',
+            'CEAT': 'CEAT Limited',
+            'ZYDUSLIFE': 'Zydus Lifesciences Limited',
+            'TORNTPHARM': 'Torrent Pharmaceuticals Limited',
+            'AUROPHARMA': 'Aurobindo Pharma Limited',
+            'LUPIN': 'Lupin Limited',
+            'BIOCON': 'Biocon Limited',
+            'ALKEM': 'Alkem Laboratories Limited',
+            'LALPATHLAB': 'Dr. Lal PathLabs Limited',
+            'FORTIS': 'Fortis Healthcare Limited',
+            'MAXHEALTH': 'Max Healthcare Institute Limited',
+            'SYNGENE': 'Syngene International Limited',
+            'PVR': 'PVR INOX Limited',
+            'PVRINOX': 'PVR INOX Limited',
+            'ZOMATO': 'Zomato Limited',
+            'NYKAA': 'FSN E-Commerce Ventures Limited',
+            'POLICYBZR': 'PB Fintech Limited',
+            'PAYTM': 'One 97 Communications Limited',
+            'DMART': 'Avenue Supermarts Limited',
+            'TATAELXSI': 'Tata Elxsi Limited',
+            'COFORGE': 'Coforge Limited',
+            'LTTS': 'L&T Technology Services Limited',
+            'PERSISTENT': 'Persistent Systems Limited',
+            'MPHASIS': 'Mphasis Limited',
+            'LTIM': 'LTIMindtree Limited',
+            'OFSS': 'Oracle Financial Services Software Limited',
+            'INDUSTOWER': 'Indus Towers Limited',
+            'IRCTC': 'Indian Railway Catering and Tourism Corporation Limited',
+            'CONCOR': 'Container Corporation of India Limited',
+            'IRFC': 'Indian Railway Finance Corporation Limited',
+            'RECLTD': 'REC Limited',
+            'PFC': 'Power Finance Corporation Limited',
+            'LICHSGFIN': 'LIC Housing Finance Limited',
+            'HDFCLIFE': 'HDFC Life Insurance Company Limited',
+            'SBILIFE': 'SBI Life Insurance Company Limited',
+            'ICICIPRULI': 'ICICI Prudential Life Insurance Company Limited',
+            'ICICIGI': 'ICICI Lombard General Insurance Company Limited',
+            'BAJAJHFL': 'Bajaj Housing Finance Limited',
+            'SHRIRAMFIN': 'Shriram Finance Limited',
+            'CHOLAFIN': 'Cholamandalam Investment and Finance Company Limited',
+            'MUTHOOTFIN': 'Muthoot Finance Limited',
+            'MANAPPURAM': 'Manappuram Finance Limited',
+            'JINDALSTEL': 'Jindal Steel & Power Limited',
+            'CRISIL': 'CRISIL Limited',
+            'ICRA': 'ICRA Limited',
+            'PETRONET': 'Petronet LNG Limited',
+            'INDIAMART': 'IndiaMART InterMESH Limited',
+            'JUSTDIAL': 'Just Dial Limited',
+            'INFO EDGE': 'Info Edge (India) Limited',
+            'NAUKRI': 'Info Edge (India) Limited',
+            'PGHH': 'Procter & Gamble Hygiene and Health Care Limited',
+            'COLPAL': 'Colgate-Palmolive (India) Limited',
+            'GILLETTE': 'Gillette India Limited',
+            'HONAUT': 'Honeywell Automation India Limited',
+            'PFIZER': 'Pfizer Limited',
+            'GLAXO': 'GlaxoSmithKline Pharmaceuticals Limited',
+            'ABBOTINDIA': 'Abbott India Limited',
+            'SANOFI': 'Sanofi India Limited',
         }
         
         # PRIORITY: Check hardcoded mapping FIRST for known Indian stocks
@@ -879,8 +993,13 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
         query_variants = [query]
         if is_likely_ticker:
             base_query = query.replace('.NS', '').replace('.BO', '')
-            if base_query in INDIAN_TICKERS:
-                if '.NS' not in query and '.BO' not in query:
+            # Always try .NS suffix for tickers (not just known ones) - helps discover new stocks
+            if '.NS' not in query and '.BO' not in query:
+                # If it's a known Indian ticker, add .NS
+                if base_query in INDIAN_TICKERS:
+                    query_variants.append(f"{base_query}.NS")
+                # For any short ticker (likely Indian), also try .NS as fallback
+                elif len(base_query) <= 12:  # Most NSE tickers are short
                     query_variants.append(f"{base_query}.NS")
         
         # Try FMP API first if available (most comprehensive)
@@ -934,10 +1053,23 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
                 except Exception as e:
                     pass
         
+        # Final fallback: For any .NS/.BO ticker (NSE/BSE), accept it even without company name
+        # This allows users to enter any Indian stock ticker
+        if not result['matches'] and is_likely_ticker:
+            base_query = query.replace('.NS', '').replace('.BO', '')
+            # If user explicitly added .NS/.BO suffix, trust it and accept the ticker
+            if '.NS' in query or '.BO' in query:
+                # Use ticker as placeholder name - will be resolved during data fetch
+                result['matches'] = [{'name': query, 'ticker': query}]
+                result['valid'] = True
+                result['best_match'] = result['matches'][0]
+                result['note'] = "Ticker accepted - company name will be fetched during analysis"
+                return result
+        
         # If no matches found, provide helpful error message
         if not result['matches']:
             if is_likely_ticker:
-                result['error'] = f"Ticker '{query}' not found. Please verify the ticker symbol."
+                result['error'] = f"Ticker '{query}' not found. For Indian stocks, try adding .NS suffix (e.g., {query}.NS)"
             else:
                 result['error'] = f"No matching companies found for '{query}'. Please check the spelling or try entering a ticker symbol."
         

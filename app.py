@@ -1033,7 +1033,13 @@ def main():
                             if success_name.endswith(suffix):
                                 success_name = success_name[:-len(suffix)].strip()
                                 break
-                        st.success(f"✅ Validated: {success_name}")
+                        
+                        # Check if this was a generic ticker acceptance (name == ticker)
+                        if success_name == st.session_state.validated_company['ticker']:
+                            st.success(f"✅ Ticker Accepted: {success_name}")
+                            st.info("ℹ️ Full company name will be fetched automatically during analysis")
+                        else:
+                            st.success(f"✅ Validated: {success_name}")
                     else:
                         st.session_state.company_matches = []
                         st.session_state.validated_company = None
