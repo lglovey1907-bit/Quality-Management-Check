@@ -806,18 +806,9 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
     query = company_name.strip()
     
     try:
-        # FIRST PRIORITY: Accept ANY ticker with .NS or .BO suffix immediately
-        # This allows validation of ANY NSE/BSE stock
-        if '.NS' in query.upper() or '.BO' in query.upper():
-            query = query.upper()  # Normalize to uppercase
-            # Try to get company name from hardcoded list first
-            base_query = query.replace('.NS', '').replace('.BO', '')
-            
-            # Will populate with company name later from hardcoded list or APIs
-            result['matches'] = [{'name': query, 'ticker': query}]
-            result['valid'] = True
-            result['best_match'] = result['matches'][0]
-            # Continue to try to fetch actual company name, but don't fail if we can't
+        # Auto-capitalize if it looks like a ticker
+        if query and len(query) <= 15 and query.replace('.', '').replace('-', '').isalnum():
+            query = query.upper()
         
         # Check if input looks like a ticker (short, uppercase, alphanumeric)
         # Remove dots and dashes for checking (to handle ALKEM.NS, BAJAJ-AUTO, etc.)
@@ -827,6 +818,20 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
             clean_query.isalnum() and
             clean_query.isupper()  # Check uppercase on cleaned string
         )
+        
+        # AUTO-ADD .NS suffix for likely Indian tickers without suffix
+        if is_likely_ticker and '.NS' not in query and '.BO' not in query and len(clean_query) <= 12:
+            # Short ticker without suffix - likely NSE stock
+            query = f"{query}.NS"
+        
+        # FIRST PRIORITY: Accept ANY ticker with .NS or .BO suffix immediately
+        # This allows validation of ANY NSE/BSE stock
+        if '.NS' in query or '.BO' in query:
+            # Will populate with company name later from hardcoded list or APIs
+            result['matches'] = [{'name': query, 'ticker': query}]
+            result['valid'] = True
+            result['best_match'] = result['matches'][0]
+            # Continue to try to fetch actual company name, but don't fail if we can't
         
         # Hardcoded mapping for major Indian stocks (use FIRST to avoid API issues)
         # Comprehensive list of NSE stocks - 150+ companies
@@ -913,6 +918,7 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
             'CROMPTON': 'Crompton Greaves Consumer Electricals Limited',
             'VOLTAS': 'Voltas Limited',
             'BLUESTARCO': 'Blue Star Limited',
+            'DIXON': 'Dixon Technologies (India) Limited',
             'GODREJPROP': 'Godrej Properties Limited',
             'DLF': 'DLF Limited',
             'OBEROIRLTY': 'Oberoi Realty Limited',
@@ -991,6 +997,27 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
             'GLAXO': 'GlaxoSmithKline Pharmaceuticals Limited',
             'ABBOTINDIA': 'Abbott India Limited',
             'SANOFI': 'Sanofi India Limited',
+            
+            # Additional popular stocks
+            'POLYCAB': 'Polycab India Limited',
+            'KANSAINER': 'Kansai Nerolac Paints Limited',
+            'RAYMOND': 'Raymond Limited',
+            'AIAENG': 'AIA Engineering Limited',
+            'WHIRLPOOL': 'Whirlpool of India Limited',
+            'SCHAEFFLER': 'Schaeffler India Limited',
+            'EXIDEIND': 'Exide Industries Limited',
+            'AMARARAJA': 'Amara Raja Energy & Mobility Limited',
+            'RELAXO': 'Relaxo Footwears Limited',
+            'BATAINDIA': 'Bata India Limited',
+            'PAGEIND': 'Page Industries Limited',
+            'VENKEYS': 'Venky\'s (India) Limited',
+            'JUBLFOOD': 'Jubilant FoodWorks Limited',
+            'WESTLIFE': 'Westlife Foodworld Limited',
+            'SAPPHIRE': 'Sapphire Foods India Limited',
+            'DEVYANI': 'Devyani International Limited',
+            'BSOFT': 'KPIT Technologies Limited',
+            'SONACOMS': 'Sona BLW Precision Forgings Limited',
+            'KPITTECH': 'KPIT Technologies Limited',
         }
         
         # PRIORITY: Check hardcoded mapping to get actual company name

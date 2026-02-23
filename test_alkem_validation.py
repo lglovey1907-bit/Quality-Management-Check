@@ -21,8 +21,16 @@ test_cases = [
     "ALKEM.NS",
     "alkem.ns",
     "ALKEM",
+    "alkem",
     "TCS.NS",
-    "RANDOMSTOCK.NS"  # Should be accepted even if not in list
+    "TCS",
+    "tcs",
+    "DIXON",
+    "dixon",
+    "COLPAL",
+    "colpal",
+    "RANDOMSTOCK.NS",  # Should be accepted even if not in list
+    "RANDOMSTOCK"  # Should get .NS added automatically
 ]
 
 for test in test_cases:

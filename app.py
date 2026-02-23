@@ -997,7 +997,7 @@ def main():
                 st.session_state.company_matches = []
             
             # Auto-capitalize ticker input if it looks like a ticker
-            if company_name_input and len(company_name_input.strip()) <= 10:
+            if company_name_input and len(company_name_input.strip()) <= 15:
                 company_name_input = company_name_input.upper()
             
             # Trigger validation when form is submitted (Enter key)
