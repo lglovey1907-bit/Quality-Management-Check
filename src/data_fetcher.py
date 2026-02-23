@@ -806,10 +806,12 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
     
     try:
         # Check if input looks like a ticker (short, uppercase, alphanumeric)
+        # Remove dots and dashes for checking (to handle ALKEM.NS, BAJAJ-AUTO, etc.)
+        clean_query = query.replace('.', '').replace('-', '')
         is_likely_ticker = (
-            len(query) <= 10 and 
-            query.replace('.', '').replace('-', '').isalnum() and
-            query.isupper()
+            len(query) <= 15 and  # Extended to handle longer tickers with suffixes
+            clean_query.isalnum() and
+            clean_query.isupper()  # Check uppercase on cleaned string
         )
         
         # Hardcoded mapping for major Indian stocks (use FIRST to avoid API issues)
@@ -1055,9 +1057,8 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
         
         # Final fallback: For any .NS/.BO ticker (NSE/BSE), accept it even without company name
         # This allows users to enter any Indian stock ticker
-        if not result['matches'] and is_likely_ticker:
-            base_query = query.replace('.NS', '').replace('.BO', '')
-            # If user explicitly added .NS/.BO suffix, trust it and accept the ticker
+        if not result['matches']:
+            # Accept any ticker with .NS/.BO suffix, regardless of is_likely_ticker check
             if '.NS' in query or '.BO' in query:
                 # Use ticker as placeholder name - will be resolved during data fetch
                 result['matches'] = [{'name': query, 'ticker': query}]
@@ -1069,7 +1070,11 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
         # If no matches found, provide helpful error message
         if not result['matches']:
             if is_likely_ticker:
-                result['error'] = f"Ticker '{query}' not found. For Indian stocks, try adding .NS suffix (e.g., {query}.NS)"
+                # More helpful error message based on suffix
+                if '.NS' in query or '.BO' in query:
+                    result['error'] = f"Ticker '{query}' not found in APIs. It will be accepted and company name fetched during analysis."
+                else:
+                    result['error'] = f"Ticker '{query}' not found. For Indian stocks, try adding .NS suffix (e.g., {query}.NS)"
             else:
                 result['error'] = f"No matching companies found for '{query}'. Please check the spelling or try entering a ticker symbol."
         
