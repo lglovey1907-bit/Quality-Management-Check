@@ -1005,12 +1005,18 @@ def main():
                 with st.spinner(f"🔍 Validating '{company_name_input}'..."):
                     deps = load_dependencies()
                     fmp_api_key = os.getenv("FMP_API_KEY")
+                    
+                    # Show validation attempt for debugging
+                    st.caption(f"🔍 Validating: {company_name_input}")
+                    
                     validation_result = deps['validate_company_name'](company_name_input, fmp_api_key)
                     
                     # DEBUG: Show what we got (temporary)
                     if validation_result['valid'] and validation_result['best_match']:
-                        debug_info = f"DEBUG - Returned: {validation_result['best_match']['name']} ({validation_result['best_match']['ticker']})"
+                        debug_info = f"✓ Valid: {validation_result['best_match']['name']} ({validation_result['best_match']['ticker']})"
                         st.caption(debug_info)
+                    elif validation_result.get('error'):
+                        st.caption(f"✗ Error: {validation_result['error']}")
                     
                     if validation_result['valid'] and validation_result['matches']:
                         st.session_state.company_matches = validation_result['matches']

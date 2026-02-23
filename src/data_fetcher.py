@@ -1,6 +1,7 @@
 """
 Data Fetcher Module - Fetches financial data from multiple sources
 Supports: Screener.in (India), Yahoo Finance (Global), Financial Modeling Prep API
+Version: 2.1.0 - Universal NSE/BSE ticker acceptance
 """
 
 import os
@@ -805,6 +806,19 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
     query = company_name.strip()
     
     try:
+        # FIRST PRIORITY: Accept ANY ticker with .NS or .BO suffix immediately
+        # This allows validation of ANY NSE/BSE stock
+        if '.NS' in query.upper() or '.BO' in query.upper():
+            query = query.upper()  # Normalize to uppercase
+            # Try to get company name from hardcoded list first
+            base_query = query.replace('.NS', '').replace('.BO', '')
+            
+            # Will populate with company name later from hardcoded list or APIs
+            result['matches'] = [{'name': query, 'ticker': query}]
+            result['valid'] = True
+            result['best_match'] = result['matches'][0]
+            # Continue to try to fetch actual company name, but don't fail if we can't
+        
         # Check if input looks like a ticker (short, uppercase, alphanumeric)
         # Remove dots and dashes for checking (to handle ALKEM.NS, BAJAJ-AUTO, etc.)
         clean_query = query.replace('.', '').replace('-', '')
@@ -979,8 +993,8 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
             'SANOFI': 'Sanofi India Limited',
         }
         
-        # PRIORITY: Check hardcoded mapping FIRST for known Indian stocks
-        if is_likely_ticker:
+        # PRIORITY: Check hardcoded mapping to get actual company name
+        if is_likely_ticker or result['valid']:  # Check even if already valid from .NS/.BO
             base_query = query.replace('.NS', '').replace('.BO', '')
             if base_query in INDIAN_STOCK_NAMES:
                 company_name = INDIAN_STOCK_NAMES[base_query]
@@ -989,6 +1003,10 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
                 result['valid'] = True
                 result['best_match'] = result['matches'][0]
                 return result
+        
+        # If already valid from .NS/.BO acceptance, return it
+        if result['valid']:
+            return result
         
         # For known Indian tickers, add .NS suffix for better API lookups
         INDIAN_TICKERS = set(INDIAN_STOCK_NAMES.keys())
@@ -1055,28 +1073,12 @@ def validate_company_name(company_name: str, fmp_api_key: Optional[str] = None) 
                 except Exception as e:
                     pass
         
-        # Final fallback: For any .NS/.BO ticker (NSE/BSE), accept it even without company name
-        # This allows users to enter any Indian stock ticker
-        if not result['matches']:
-            # Accept any ticker with .NS/.BO suffix, regardless of is_likely_ticker check
-            if '.NS' in query or '.BO' in query:
-                # Use ticker as placeholder name - will be resolved during data fetch
-                result['matches'] = [{'name': query, 'ticker': query}]
-                result['valid'] = True
-                result['best_match'] = result['matches'][0]
-                result['note'] = "Ticker accepted - company name will be fetched during analysis"
-                return result
-        
         # If no matches found, provide helpful error message
         if not result['matches']:
             if is_likely_ticker:
-                # More helpful error message based on suffix
-                if '.NS' in query or '.BO' in query:
-                    result['error'] = f"Ticker '{query}' not found in APIs. It will be accepted and company name fetched during analysis."
-                else:
-                    result['error'] = f"Ticker '{query}' not found. For Indian stocks, try adding .NS suffix (e.g., {query}.NS)"
+                result['error'] = f"Ticker '{query}' not found. For Indian stocks, try adding .NS suffix (e.g., {query}.NS)"
             else:
-                result['error'] = f"No matching companies found for '{query}'. Please check the spelling or try entering a ticker symbol."
+                result['error'] = f"No matching companies found for '{query}'. Please check the spelling or try entering a ticker symbol with .NS suffix."
         
         return result
         
